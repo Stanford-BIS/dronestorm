@@ -1,19 +1,29 @@
 from __future__ import division
-import smbus, Adafruit_PCA9685, time
+import Adafruit_PCA9685, time
 
 pwm = Adafruit_PCA9685.PCA9685()
 
-servo_min = 150
-servo_max = 600
+# pwm_min = 223
+# pwm_max = 335
+#
+# pwm.set_pwm_freq(43)
+#
+# #while True:
+# pwm.set_pwm(2, 0, pwm_max)
 
-pwm.set_pwm_freq(60)
+def set_servo_pulse(channel, pulse):
+    pulse_length = 1000000    # 1,000,000 us per second
+    pulse_length //= 1/.022       # 60 Hz
+    print('{0}us per period'.format(pulse_length))
+    pulse_length //= 4096     # 12 bits of resolution
+    print('{0}us per bit'.format(pulse_length))
+    pulse *= 1000
+    pulse //= pulse_length
+    print(pulse)
+    pwm.set_pwm(channel, 0, int(pulse))
 
-channel = input("Enter channel of servo: ")
+pwm.set_pwm_freq(1/.023)
 
-cont = True
-
-while cont:
-    pwm.set_pwm(channel, 0, servo_min)
-    time.sleep(1)
-    pwm.set_pwm(channel, 0, servo_max)
-    time.sleep(1)
+for i in range(6):
+    print(i)
+    set_servo_pulse(i, 1.4)
