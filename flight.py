@@ -9,7 +9,6 @@ import Adafruit_PCA9685, time
 # range of values: 1.1ms -> 1.9ms
 
 pwm = Adafruit_PCA9685.PCA9685()
-board = MultiWii("/dev/ttyUSB0")
 
 pwm.set_pwm_freq(1/.023)    # ~45.45 Hz
 
@@ -43,16 +42,22 @@ def setPitch(width):
 def setRoll(width):
     set_servo_pulse(3, convertWidth(width))
 
-def getAngX():
+def getData(arg):
+    board = MultiWii("/dev/ttyUSB0")
     board.getData(MultiWii.ATTITUDE)
-    return board.attitude['angx']
 
-def getAngY():
-    board.getData(MultiWii.ATTITUDE)
-    return board.attitude['angy']
-
-def getHeading():
-    board.getData(MultiWii.ATTITUDE)
-    return board.attitude['heading']
-
-print(getHeading())
+    if arg == 'angx':
+        x = board.attitude[arg]
+        board.closeSerial()
+        return x
+    elif arg == 'angy':
+        x = board.attitude[arg]
+        board.closeSerial()
+        return x
+    elif arg == 'heading':
+        x = board.attitude[arg]
+        board.closeSerial()
+        return x
+    else:
+        print("Invalid argument")
+        board.closeSerial()

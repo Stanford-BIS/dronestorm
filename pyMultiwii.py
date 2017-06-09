@@ -12,7 +12,7 @@ __email__ = "alduxvm@gmail.com"
 __status__ = "Development"
 
 
-import serial, time, struct
+import serial, time, struct, subprocess, os
 
 
 class MultiWii:
@@ -86,8 +86,6 @@ class MultiWii:
         wakeup = 2
         try:
             self.ser.open()
-            if self.PRINT:
-                print "Waking up board on "+self.ser.port+"..."
             for i in range(1,wakeup):
                 if self.PRINT:
                     print wakeup-i
@@ -330,6 +328,11 @@ class MultiWii:
                     self.motor['timestamp']="%0.2f" % (time.time(),)
             except Exception, error:
                 pass
+
+    def closeSerial(self):
+        self.ser.close()
+        bashCommand = "stty sane < /dev/ttyUSB0"
+        os.system(bashCommand)
 
     """Function to ask for 2 fixed cmds, attitude and rc channels, and receive them. Note: is a bit slower than others"""
     def getData2cmd(self, cmd):
