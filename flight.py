@@ -145,28 +145,6 @@ def flightStabilization(des_p, des_r):
     except (KeyboardInterrupt, SystemExit):
         board.closeSerial()
 
-def demoApp():
-
-    reset()
-
-    time.sleep(1)
-
-    setYaw(1.9)
-    setPitch(1.9)
-    setRoll(1.9)
-
-    time.sleep(2)
-
-    setYaw(1.1)
-    setPitch(1.1)
-    setRoll(1.1)
-
-    time.sleep(2)
-
-    setYaw(1.5)
-    setPitch(1.5)
-    setRoll(1.5)
-
 # RC Multiplexer
 reset()
 flightStabilization(0,0)
