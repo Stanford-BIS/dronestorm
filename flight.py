@@ -9,7 +9,6 @@ import Adafruit_PCA9685, time
 # range of values: 1.1ms -> 1.9ms
 
 pwm = Adafruit_PCA9685.PCA9685()
-
 pwm.set_pwm_freq(1/.023)    # ~45.45 Hz
 
 # used to adjust pulse width
@@ -34,29 +33,50 @@ def convertWidth(width):
     return width*SCALING_FACTOR
 
 def setYaw(width):
-    set_servo_pulse(1, convertWidth(width))
+    width_correx, valid = isValid(width)
+
+    set_servo_pulse(1, width_correx)
+
+    if not valid:
+        print("Warning Yaw out of range!")
 
 def setPitch(width):
-    set_servo_pulse(2, convertWidth(width))
+    width_correx, valid = isValid(width)
+
+    set_servo_pulse(2, width_correx)
+
+    if not valid:
+        print("Warning Pitch out of range!")
 
 def setRoll(width):
-    set_servo_pulse(3, convertWidth(width))
+    width_correx, valid = isValid(width)
 
-def getData(arg):
-    board = MultiWii("/dev/ttyUSB0")
+    set_servo_pulse(3, width_correx)
+
+    if not valid:
+        print("Warning Roll out of range!")
+
+def isValid(width):
+    width_c = convertWidth(width)
+
+    if(width_c > 1.9):
+        return convertWidth(1.9), False
+    elif(width_c < 1.1):
+        return convertWidth(1.1), False
+    else:
+        return width_c, True
+
+def getData(board, arg):
     board.getData(MultiWii.ATTITUDE)
 
     if arg == 'angx': # Roll
         x = board.attitude[arg]
-        board.closeSerial()
         return x
     elif arg == 'angy': # Pitch
         x = board.attitude[arg]
-        board.closeSerial()
         return x
     elif arg == 'heading': # Yaw
         x = board.attitude[arg]
-        board.closeSerial()
         return x
     else:
         print("Invalid argument\n")
@@ -73,7 +93,7 @@ def servoTest():
 
     desired_Pitch = 0
 
-    K_p = 1
+    K_pitch = 1
     K_i = 0
     K_d = 0
 
@@ -85,7 +105,7 @@ def servoTest():
 
         integral += error*timex
         derivative = (error - error_p) / timex
-        output = K_p*error + K_i*integral + K_d*derivative
+        output = K_pitch*error + K_i*integral + K_d*derivative
 
         error_p = error
 
@@ -96,24 +116,57 @@ def servoTest():
         time.sleep(timex)
 
 def flightStabilization(des_p, des_r):
+    reset()
+    time.sleep(1)
+    board = MultiWii("/dev/ttyUSB0")
 
-    K_p = 1
+    K_pitch = .01
+    K_roll = .01
 
     desired_Pitch = des_p
     desired_Roll = des_r
 
-    while (True):
-        pitch = getData("angy")
-        roll = getData("angx")
+    try:
+        while (True):
+            pitch = getData(board, "angy")
+            roll = getData(board, "angx")
 
-        error_pitch = pitch - desired_Pitch
-        error_roll = roll - desired_Roll
+            error_pitch = desired_Pitch - pitch
+            error_roll =  desired_Roll - roll
 
-        output_pitch = K_p*error_pitch
-        output_roll = K_r*error_roll
+            output_pitch = K_pitch * error_pitch + pitch
+            output_roll = K_roll * error_roll + roll
 
-        setPitch(output_pitch * -1)
-        setRoll(output_roll * -1)
+            setPitch(output_pitch)
+            setRoll(output_roll)
+            setYaw(1.5)
 
-servoTest()
-#flightStabilization(0, 0)
+
+    except (KeyboardInterrupt, SystemExit):
+        board.closeSerial()
+
+def demoApp():
+
+    reset()
+
+    time.sleep(1)
+
+    setYaw(1.9)
+    setPitch(1.9)
+    setRoll(1.9)
+
+    time.sleep(2)
+
+    setYaw(1.1)
+    setPitch(1.1)
+    setRoll(1.1)
+
+    time.sleep(2)
+
+    setYaw(1.5)
+    setPitch(1.5)
+    setRoll(1.5)
+
+# RC Multiplexer
+reset()
+flightStabilization(0,0)
