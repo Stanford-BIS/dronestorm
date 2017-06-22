@@ -99,20 +99,21 @@ class DroneControl:
         for i in range(6):
             set_servo_pulse(i, MED_WIDTH)
 
-    def getData(board, arg):
+    def getData(self, board, arg):
         '''
         Returns the Attitude telemetry data from the Naze32 flight controller
 
         Parameters: Board MultiWii Object, Desired data point {angx, angy, heading}
         Returns: double
         '''
-        board.getData(MultiWii.ATTITUDE)
+        self.board = MultiWii("/dev/ttyUSB0")
+        self.board.getData(MultiWii.ATTITUDE)
 
         if arg == 'angx' or arg == 'angy' or arg == 'heading':
-            return board.attitude[arg]
+            return self.board.attitude[arg]
         else:
             print("Invalid argument\n")
-            board.closeSerial()
+            self.board.closeSerial()
 
     def signalControlExample():
         '''
