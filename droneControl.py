@@ -30,7 +30,7 @@ class DroneControl:
         self.pwm = Adafruit_PCA9685.PCA9685()
         self.pwm.set_pwm_freq(1/.023)    # ~45.45 Hz
 
-    def set_servo_pulse(channel, pulse):
+    def set_servo_pulse(self, channel, pulse):
         '''
         Used to set a certain Pulse Width on a channel
         '''
@@ -42,62 +42,62 @@ class DroneControl:
 
         self.pwm.set_pwm(channel, 0, int(pulse))
 
-    def convertWidth(width):
+    def convertWidth(self, width):
         '''
         Internal conversion method to send PWM signals to Adafruit library
         '''
-        return width * SCALING_FACTOR
+        return width * self.SCALING_FACTOR
 
-    def setYaw(width):
+    def setYaw(self, width):
         '''
         Sets the Yaw to a desired PWM width
         '''
-        width_c, valid = isValid(width)
-        set_servo_pulse(YAW_CHANNEL, width_correx)
+        width_c, valid = self.isValid(width)
+        self.set_servo_pulse(self.YAW_CHANNEL, width_c)
 
         if not valid:
             print("WARNING: Yaw out of range!")
 
-    def setPitch(width):
+    def setPitch(self, width):
         '''
         Sets the Pitch to a desired PWM width
         '''
-        width_c, valid = isValid(width)
-        set_servo_pulse(PITCH_CHANNEL, width_correx)
+        width_c, valid = self.isValid(width)
+        self.set_servo_pulse(self.PITCH_CHANNEL, width_c)
 
         if not valid:
             print("WARNING: Pitch out of range!")
 
-    def setRoll(width):
+    def setRoll(self, width):
         '''
         Sets the Roll to a desired PWM width
         '''
-        width_c, valid = isValid(width)
-        set_servo_pulse(ROLL_CHANNEL, width_correx)
+        width_c, valid = self.isValid(width)
+        self.set_servo_pulse(self.ROLL_CHANNEL, width_c)
 
         if not valid:
             print("WARNING: Roll out of range!")
 
-    def isValid(width):
+    def isValid(self, width):
         '''
         Verifies that the PWM signals are in the accepted range.
         If not, the MAX_WIDTH or MIN_WIDTH is returned
         '''
-        width_c = convertWidth(width)
+        width_c = self.convertWidth(width)
 
-        if(width_c > MAX_WIDTH):
-            return convertWidth(MAX_WIDTH), False
-        elif(width_c < MIN_WIDTH):
-            return convertWidth(MIN_WIDTH), False
+        if(width_c >= self.MAX_WIDTH):
+            return self.convertWidth(self.MAX_WIDTH), False
+        elif(width_c <= self.MIN_WIDTH):
+            return self.convertWidth(self.MIN_WIDTH), False
         else:
             return width_c, True
 
-    def reset():
+    def reset(self):
         '''
         Resets channels 0-6 on the feather board; used as cleanup measure
         '''
         for i in range(6):
-            set_servo_pulse(i, MED_WIDTH)
+            self.set_servo_pulse(i, self.convertWidth(self.MED_WIDTH))
 
     def getData(self, board, arg):
         '''
@@ -115,23 +115,23 @@ class DroneControl:
             print("Invalid argument\n")
             self.board.closeSerial()
 
-    def signalControlExample():
+    def signalControlExample(self):
         '''
         Sets the Roll/Pitch/Yaw on the Naze32 flight controller
         to maximum then minimum pulse widths
         '''
-        reset()
+        self.reset()
         time.sleep(1)
 
-        setYaw(MAX_WIDTH)
-        setPitch(MAX_WIDTH)
-        setRoll(MAX_WIDTH)
+        self.setYaw(self.MAX_WIDTH)
+        self.setPitch(self.MAX_WIDTH)
+        self.setRoll(self.MAX_WIDTH)
 
         time.sleep(2)
 
-        setYaw(MIN_WIDTH)
-        setPitch(MIN_WIDTH)
-        setRoll(MIN_WIDTH)
+        self.setYaw(self.MIN_WIDTH)
+        self.setPitch(self.MIN_WIDTH)
+        self.setRoll(self.MIN_WIDTH)
 
         time.sleep(2)
-        reset()
+        self.reset()
