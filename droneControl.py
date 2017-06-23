@@ -83,14 +83,13 @@ class DroneControl:
         Verifies that the PWM signals are in the accepted range.
         If not, the MAX_WIDTH or MIN_WIDTH is returned
         '''
-        width_c = self.convertWidth(width)
 
-        if(width_c >= self.MAX_WIDTH):
+        if(width > self.MAX_WIDTH):
             return self.convertWidth(self.MAX_WIDTH), False
-        elif(width_c <= self.MIN_WIDTH):
+        elif(width < self.MIN_WIDTH):
             return self.convertWidth(self.MIN_WIDTH), False
         else:
-            return width_c, True
+            return self.convertWidth(width), True
 
     def reset(self):
         '''
