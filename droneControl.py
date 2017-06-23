@@ -116,6 +116,9 @@ class DroneControl:
             self.board.closeSerial()
 
     def exit(self):
+        '''
+        Used to gracefully exit and close the serial port
+        '''
         self.resetChannels()
         self.board = MultiWii("/dev/ttyUSB0")
         self.board.closeSerial()
@@ -140,3 +143,5 @@ class DroneControl:
 
         time.sleep(2)
         self.resetChannels()
+
+drone = DroneControl()
