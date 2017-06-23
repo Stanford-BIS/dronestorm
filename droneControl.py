@@ -29,6 +29,7 @@ class DroneControl:
 
         self.pwm = Adafruit_PCA9685.PCA9685()
         self.pwm.set_pwm_freq(1/.023)    # ~45.45 Hz
+        self.board = MultiWii("/dev/ttyUSB0")
         self.resetChannels() # Used to activate the Featherboard
 
     def set_servo_pulse(self, channel, pulse):
@@ -106,7 +107,6 @@ class DroneControl:
         Parameters: Board MultiWii Object, Desired data point {angx, angy, heading}
         Returns: double
         '''
-        self.board = MultiWii("/dev/ttyUSB0")
         self.board.getData(MultiWii.ATTITUDE)
 
         if arg == 'angx' or arg == 'angy' or arg == 'heading':
