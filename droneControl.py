@@ -29,6 +29,7 @@ class DroneControl:
 
         self.pwm = Adafruit_PCA9685.PCA9685()
         self.pwm.set_pwm_freq(1/.023)    # ~45.45 Hz
+        self.resetChannels() # Used to activate the Featherboard
 
     def set_servo_pulse(self, channel, pulse):
         '''
@@ -91,14 +92,14 @@ class DroneControl:
         else:
             return self.convertWidth(width), True
 
-    def reset(self):
+    def resetChannels(self):
         '''
         Resets channels 0-6 on the feather board; used as cleanup measure
         '''
         for i in range(6):
             self.set_servo_pulse(i, self.convertWidth(self.MED_WIDTH))
 
-    def getData(self, board, arg):
+    def getData(self, arg):
         '''
         Returns the Attitude telemetry data from the Naze32 flight controller
 
@@ -114,12 +115,17 @@ class DroneControl:
             print("Invalid argument\n")
             self.board.closeSerial()
 
+    def exit(self):
+        self.resetChannels()
+        self.board = MultiWii("/dev/ttyUSB0")
+        self.board.closeSerial()
+
     def signalControlExample(self):
         '''
         Sets the Roll/Pitch/Yaw on the Naze32 flight controller
         to maximum then minimum pulse widths
         '''
-        self.reset()
+        self.resetChannels()
         time.sleep(1)
 
         self.setYaw(self.MAX_WIDTH)
@@ -133,4 +139,4 @@ class DroneControl:
         self.setRoll(self.MIN_WIDTH)
 
         time.sleep(2)
-        self.reset()
+        self.resetChannels()

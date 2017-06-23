@@ -1,21 +1,18 @@
 from droneControl import DroneControl
 
 # Flight stabilization app using the DroneControl Library
-drone = DroneControl()
 
-drone.reset()
-time.sleep(1)
+drone = DroneControl()
 
 K_pitch = .01
 K_roll = .01
-
-desired_Pitch = des_p
-desired_Roll = des_r
+desired_Pitch = 0
+desired_Roll = 0
 
 try:
     while (True):
-        pitch = drone.getData(board, "angy")
-        roll = drone.getData(board, "angx")
+        pitch = drone.getData("angy")
+        roll = drone.getData("angx")
 
         error_pitch = desired_Pitch - pitch
         error_roll =  desired_Roll - roll
@@ -25,7 +22,6 @@ try:
 
         drone.setPitch(output_pitch)
         drone.setRoll(output_roll)
-        drone.setYaw(1.5)
 
 except (KeyboardInterrupt, SystemExit):
-    board.closeSerial()
+    drone.exit()
