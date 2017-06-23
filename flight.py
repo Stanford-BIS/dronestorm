@@ -4,8 +4,8 @@ from droneControl import DroneControl
 
 drone = DroneControl()
 
-K_pitch = .01
-K_roll = .01
+K_pitch = .001
+K_roll = .001
 desired_Pitch = 0
 desired_Roll = 0
 
