@@ -20,13 +20,13 @@ class DroneControl:
     PITCH_CHANNEL = 2
     ROLL_CHANNEL = 3
 
+    # Scaling factor to convert desired PWM widths to Adafruit signals
     SCALING_FACTOR = 1.4 / 1.5
 
     def __init__(self):
         '''
-        Initializes PWM object
+        Initializes PWM and MultiWii objects
         '''
-
         self.pwm = Adafruit_PCA9685.PCA9685()
         self.pwm.set_pwm_freq(1/.023)    # ~45.45 Hz
         self.board = MultiWii("/dev/ttyUSB0")
@@ -85,7 +85,6 @@ class DroneControl:
         Verifies that the PWM signals are in the accepted range.
         If not, the MAX_WIDTH or MIN_WIDTH is returned
         '''
-
         if(width > self.MAX_WIDTH):
             return self.convertWidth(self.MAX_WIDTH), False
         elif(width < self.MIN_WIDTH):
@@ -104,8 +103,8 @@ class DroneControl:
         '''
         Returns the Attitude telemetry data from the Naze32 flight controller
 
-        Parameters: Board MultiWii Object, Desired data point {angx, angy, heading}
-        Returns: double
+        param: MultiWii Object, {"angx", "angy", "heading"}
+        return: {angx, angy, heading}
         '''
         self.board.getData(MultiWii.ATTITUDE)
 
@@ -143,5 +142,3 @@ class DroneControl:
 
         time.sleep(2)
         self.resetChannels()
-
-drone = DroneControl()
