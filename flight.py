@@ -1,4 +1,4 @@
-from droneControl import DroneControl
+from DroneControl import DroneControl
 
 # Flight stabilization app using the DroneControl Library
 # Current roll and pitch values are acquired from the flight controller
