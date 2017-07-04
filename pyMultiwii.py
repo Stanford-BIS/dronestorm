@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """multiwii.py: Handles Multiwii Serial Protocol."""
 
 __author__ = "Aldo Vargas"
@@ -11,12 +9,9 @@ __maintainer__ = "Aldo Vargas"
 __email__ = "alduxvm@gmail.com"
 __status__ = "Development"
 
-
 import serial, time, struct, subprocess, os
 
-
-class MultiWii:
-
+class MultiWii(object):
     """Multiwii Serial Protocol message ID"""
     """ notice: just attitude, rc channels and raw imu, set raw rc are implemented at the moment """
     IDENT = 100
@@ -57,7 +52,6 @@ class MultiWii:
 
     """Class initialization"""
     def __init__(self, serPort):
-
         """Global variables of data"""
         self.PIDcoef = {'rp':0,'ri':0,'rd':0,'pp':0,'pi':0,'pd':0,'yp':0,'yi':0,'yd':0}
         self.rcChannels = {'roll':0,'pitch':0,'yaw':0,'throttle':0,'elapsed':0,'timestamp':0}

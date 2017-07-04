@@ -1,15 +1,14 @@
-from __future__ import division
-from pyMultiwii import MultiWii
-import Adafruit_PCA9685, time
-
 """
 Library to acquire Telemetry Data from Naze32 board (angx, angy and heading).
 Furthermore, contains methods to send Roll/Pitch/Yaw signals to the Naze32
 flight controller from a Raspberry pi via a Feather board using PWM signals.
 """
 
-class DroneControl:
+from __future__ import division
+from pyMultiwii import MultiWii
+import Adafruit_PCA9685, time
 
+class DroneControl(object):
     # Range of Values (Pulse Width): 1.1ms -> 1.9ms
     MIN_WIDTH = 1.10
     MAX_WIDTH = 1.90

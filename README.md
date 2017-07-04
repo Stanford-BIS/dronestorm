@@ -17,7 +17,12 @@ interface.
 
 ## I2C Interface
 
-The onboard communicates with the PWM output board via an I2C.
+The onboard communicates with the PWM output board via the I2C protocol.
 As described [here](https://learn.adafruit.com/adafruits-raspberry-pi-lesson-4-gpio-setup/configuring-i2c),
 check  the pi's I2C interface using
-    sudo i2cdetect -y 1
+```
+sudo i2cdetect -y 1
+```
+
+The I2C library is provided by the [ext/Adafruit_Python_PCA9685](https://github.com/adafruit/Adafruit_Python_PCA9685) subtree.
+Note that it must be installed per the README directions within the ext/Adafruit_Python_PCA9685 directory.
