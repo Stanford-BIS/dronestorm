@@ -8,9 +8,9 @@ drone = DroneControl()
 try:
     while (True):
         # Fetching current pitch/roll values
-        roll = drone.getRoll()
-        pitch = drone.getPitch()
-        yaw = drone.getYaw()
+        roll = drone.get_roll()
+        pitch = drone.get_pitch()
+        yaw = drone.get_yaw()
         sys.stdout.write(
             "roll:%6.1f pitch:%5.1f yaw:%5.1f\r"%(roll, pitch, yaw))
         sys.stdout.flush()

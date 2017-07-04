@@ -29,7 +29,7 @@ class DroneControl(object):
         self.pwm = Adafruit_PCA9685.PCA9685()
         self.pwm.set_pwm_freq(1/.023)    # ~45.45 Hz
         self.board = MultiWii("/dev/ttyUSB0")
-        self.resetChannels() # Used to activate the Featherboard
+        self.reset_channels() # Used to activate the Featherboard
 
     def set_servo_pulse(self, channel, pulse):
         '''
@@ -43,62 +43,62 @@ class DroneControl(object):
 
         self.pwm.set_pwm(channel, 0, int(pulse))
 
-    def convertWidth(self, width):
+    def convert_width(self, width):
         '''
         Internal conversion method to send PWM signals to Adafruit library
         '''
         return width * self.SCALING_FACTOR
 
-    def setYaw(self, width):
+    def set_yaw(self, width):
         '''
         Sets the Yaw to a desired PWM width
         '''
-        width_c, valid = self.isValid(width)
+        width_c, valid = self.is_valid(width)
         self.set_servo_pulse(self.YAW_CHANNEL, width_c)
 
         if not valid:
             print("WARNING: Yaw out of range!")
 
-    def setPitch(self, width):
+    def set_pitch(self, width):
         '''
         Sets the Pitch to a desired PWM width
         '''
-        width_c, valid = self.isValid(width)
+        width_c, valid = self.is_valid(width)
         self.set_servo_pulse(self.PITCH_CHANNEL, width_c)
 
         if not valid:
             print("WARNING: Pitch out of range!")
 
-    def setRoll(self, width):
+    def set_roll(self, width):
         '''
         Sets the Roll to a desired PWM width
         '''
-        width_c, valid = self.isValid(width)
+        width_c, valid = self.is_valid(width)
         self.set_servo_pulse(self.ROLL_CHANNEL, width_c)
 
         if not valid:
             print("WARNING: Roll out of range!")
 
-    def isValid(self, width):
+    def is_valid(self, width):
         '''
         Verifies that the PWM signals are in the accepted range.
         If not, the MAX_WIDTH or MIN_WIDTH is returned
         '''
         if(width > self.MAX_WIDTH):
-            return self.convertWidth(self.MAX_WIDTH), False
+            return self.convert_width(self.MAX_WIDTH), False
         elif(width < self.MIN_WIDTH):
-            return self.convertWidth(self.MIN_WIDTH), False
+            return self.convert_width(self.MIN_WIDTH), False
         else:
-            return self.convertWidth(width), True
+            return self.convert_width(width), True
 
-    def resetChannels(self):
+    def reset_channels(self):
         '''
         Resets channels 0-6 on the feather board; used as cleanup measure
         '''
         for i in range(6):
-            self.set_servo_pulse(i, self.convertWidth(self.MED_WIDTH))
+            self.set_servo_pulse(i, self.convert_width(self.MED_WIDTH))
 
-    def getData(self, arg):
+    def get_data(self, arg):
         '''
         Returns the Attitude telemetry data from the Naze32 flight controller
 
@@ -113,19 +113,19 @@ class DroneControl(object):
             print("Invalid argument\n")
             self.board.closeSerial()
 
-    def getRoll(self):
+    def get_roll(self):
         """Returns the roll angle
         """
         self.board.getData(MultiWii.ATTITUDE)
         return self.board.attitude["angy"]
 
-    def getPitch(self):
+    def get_pitch(self):
         """Returns the pitch angle
         """
         self.board.getData(MultiWii.ATTITUDE)
         return self.board.attitude["angx"]
 
-    def getYaw(self):
+    def get_yaw(self):
         """Returns the yaw angle
         """
         self.board.getData(MultiWii.ATTITUDE)
@@ -135,27 +135,27 @@ class DroneControl(object):
         '''
         Used to gracefully exit and close the serial port
         '''
-        self.resetChannels()
+        self.reset_channels()
         self.board = MultiWii("/dev/ttyUSB0")
         self.board.closeSerial()
 
-    def signalControlExample(self):
+    def control_example(self):
         '''
         Sets the Roll/Pitch/Yaw on the Naze32 flight controller
         to maximum then minimum pulse widths
         '''
-        self.resetChannels()
+        self.reset_channels()
         time.sleep(1)
 
-        self.setYaw(self.MAX_WIDTH)
-        self.setPitch(self.MAX_WIDTH)
-        self.setRoll(self.MAX_WIDTH)
+        self.set_yaw(self.MAX_WIDTH)
+        self.set_pitch(self.MAX_WIDTH)
+        self.set_roll(self.MAX_WIDTH)
 
         time.sleep(2)
 
-        self.setYaw(self.MIN_WIDTH)
-        self.setPitch(self.MIN_WIDTH)
-        self.setRoll(self.MIN_WIDTH)
+        self.set_yaw(self.MIN_WIDTH)
+        self.set_pitch(self.MIN_WIDTH)
+        self.set_roll(self.MIN_WIDTH)
 
         time.sleep(2)
-        self.resetChannels()
+        self.reset_channels()

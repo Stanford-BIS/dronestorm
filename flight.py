@@ -12,14 +12,14 @@ K_roll = .01
 
 # Start program by placing drone on a flat surface to ensure accurate
 # calibration Values
-desired_Pitch = drone.getData("angy")
-desired_Roll = drone.getData("angx")
+desired_Pitch = drone.get_data("angy")
+desired_Roll = drone.get_data("angx")
 
 try:
     while (True):
         # Fetching current pitch/roll values
-        pitch = drone.getData("angy")
-        roll = drone.getData("angx")
+        pitch = drone.get_data("angy")
+        roll = drone.get_data("angx")
 
         # Determining error between desired pitch/roll and actual pitch/roll
         error_pitch = desired_Pitch - pitch
@@ -31,8 +31,8 @@ try:
         output_roll = K_roll * error_roll + drone.MED_WIDTH
 
         # Setting corrected PWM pulse widths
-        drone.setPitch(output_pitch)
-        drone.setRoll(output_roll)
+        drone.set_pitch(output_pitch)
+        drone.set_roll(output_roll)
 
 except (KeyboardInterrupt, SystemExit):
     # Graceful Exit
