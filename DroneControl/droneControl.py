@@ -113,6 +113,24 @@ class DroneControl(object):
             print("Invalid argument\n")
             self.board.closeSerial()
 
+    def getRoll(self):
+        """Returns the roll angle
+        """
+        self.board.getData(MultiWii.ATTITUDE)
+        return self.board.attitude["angy"]
+
+    def getPitch(self):
+        """Returns the pitch angle
+        """
+        self.board.getData(MultiWii.ATTITUDE)
+        return self.board.attitude["angx"]
+
+    def getYaw(self):
+        """Returns the yaw angle
+        """
+        self.board.getData(MultiWii.ATTITUDE)
+        return self.board.attitude["heading"]
+
     def exit(self):
         '''
         Used to gracefully exit and close the serial port
