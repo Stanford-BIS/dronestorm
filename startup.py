@@ -1,5 +1,13 @@
 #!/usr/bin/python
 
+### BEGIN INIT INFO
+# Provides:          i2c_pwm_startup
+# Required-Start:    $local_fs $network
+# Required-Stop:     $local_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+### END INIT INFO
+
 """ Startup script to initialize pwm channels
 
 The flight controller failsafe triggers if signal parameters (freq, duty cycle)

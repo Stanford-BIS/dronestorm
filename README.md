@@ -26,3 +26,5 @@ sudo i2cdetect -y 1
 
 The I2C library is provided by the [ext/Adafruit_Python_PCA9685](https://github.com/adafruit/Adafruit_Python_PCA9685) subtree.
 Note that it must be installed per the README directions within the ext/Adafruit_Python_PCA9685 directory.
+
+Execute register_startup.sh to set up startup.py to run upon boot.
