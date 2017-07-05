@@ -20,14 +20,12 @@ class DroneComm(object):
         pwm period (default 22ms)
     k_period: float
         pwm period calibration factor
-    k_pwidth: float
-        pwm positive pulse width calibration factor
-    roll_pwm_trim:  int
-        roll channel trim
+    roll_pwm_trim: int
+        roll channel trim (us)
     pitch_pwm_trim: int
-        pitch channel trim
-    yaw_pwm_trim:   int
-        yaw channel trim
+        pitch channel trim (us)
+    yaw_pwm_trim: int
+        yaw channel trim (us)
     port: string
         usb port attached to flight control board (default "/dev/ttyUSB0")
         if None, assumes no input connection from flight control board
@@ -41,10 +39,10 @@ class DroneComm(object):
     # each pwm cycle is divided into TICKS units of time
     TICKS = 4096
 
-    # Featherboard channels
-    YAW_CHANNEL   = 1
-    PITCH_CHANNEL = 2
+    # Featherboard channel map
     ROLL_CHANNEL  = 3
+    PITCH_CHANNEL = 2
+    YAW_CHANNEL   = 1
 
     # Calibration factor to compensate for mismatch between
     # requested pwm period and pwm freq implemented by Adafruit PWM generator
@@ -54,19 +52,18 @@ class DroneComm(object):
     DEFAULT_K_PERIOD = 0.023 / 0.022 # 23ms/22ms
 
     def __init__(
-            self, period=0.022, k_period=None, k_pwidth=None,
+            self, period=0.022, k_period=None,
             roll_pwm_trim=0, pitch_pwm_trim=0, yaw_pwm_trim=0,
             port="/dev/ttyUSB0"):
-        """Initializes PWM and MultiWii objects"""
         self.period = period
+
+        # store trims in units of seconds
+        self.roll_pwm_trim  = roll_pwm_trim * 1E-6
+        self.pitch_pwm_trim = pitch_pwm_trim * 1E-6
+        self.yaw_pwm_trim   = yaw_pwm_trim * 1E-6
 
         if k_period is None:
             k_period = self.DEFAULT_K_PERIOD
-
-        if k_pwidth is None:
-            self.k_pwidth = self.DEFAULT_K_PWIDTH
-        else:
-            self.k_pwdith = k_pwidth
 
         self.pwm = Adafruit_PCA9685.PCA9685()
         self.pwm.set_pwm_freq(1./(k_period*period))
@@ -76,6 +73,20 @@ class DroneComm(object):
             self.board = MultiWii(port)
 
         self.reset_channels()
+
+    def reset_channels(self):
+        """Reset channels 0-6 on the feather board
+        
+        Applies trim to roll/pitch/yaw channels
+        """
+        for i in range(6):
+            self.set_pwidth(i, self.MID_WIDTH)
+        self.set_pwidth(
+            self.ROLL_CHANNEL, self.MID_WIDTH + self.roll_pwm_trim)
+        self.set_pwidth(
+            self.PITCH_CHANNEL, self.MID_WIDTH + self.pitch_pwm_trim)
+        self.set_pwidth(
+            self.YAW_CHANNEL, self.MID_WIDTH + self.yaw_pwm_trim)
 
     def set_pwidth(self, channel, width):
         """Set a positive Pulse Width on a channel
@@ -91,48 +102,62 @@ class DroneComm(object):
         pulse = int(round(width))
         self.pwm.set_pwm(channel, 0, pulse)
 
-    def set_yaw_pwm(self, width):
-        """Sets the Yaw to a desired PWM width"""
+    def set_roll_pwidth(self, width):
+        """Apply trim and set the pwm Roll signal's positive pulse width
+        
+        Parameters
+        ----------
+        width: float
+            positive pulse width (seconds)
+        """
         # apply trim offset
-        width_c, valid = self.is_valid(width)
-        self.set_pwidth(self.YAW_CHANNEL, width_c)
-
-        if not valid:
-            print("WARNING: Yaw out of range!")
-
-    def set_pitch_pwm(self, width):
-        """Sets the Pitch to a desired PWM width"""
-        # apply trim offset
-        width_c, valid = self.is_valid(width)
-        self.set_pwidth(self.PITCH_CHANNEL, width_c)
-
-        if not valid:
-            print("WARNING: Pitch out of range!")
-
-    def set_roll_pwm(self, width):
-        """Sets the Roll to a desired PWM width"""
-        width_c, valid = self.is_valid(width)
-        self.set_pwidth(self.ROLL_CHANNEL, width_c)
-
+        width += self.roll_pwm_trim
+        width, valid = self.validate_pwidth(width)
+        self.set_pwidth(self.ROLL_CHANNEL, width)
         if not valid:
             print("WARNING: Roll out of range!")
 
-    def is_valid(self, width):
+    def set_pitch_pwidth(self, width):
+        """Apply trim and set the pwm Pitch signal's positive pulse width
+        
+        Parameters
+        ----------
+        width: float
+            positive pulse width (seconds)
+        """
+        # apply trim offset
+        width += self.pitch_pwm_trim
+        width, valid = self.validate_pwidth(width)
+        self.set_pwidth(self.PITCH_CHANNEL, width)
+        if not valid:
+            print("WARNING: Pitch out of range!")
+
+    def set_yaw_pwidth(self, width):
+        """Apply trim and set the pwm Yaw signal's positive pulse width
+        
+        Parameters
+        ----------
+        width: float
+            positive pulse width (seconds)
+        """
+        # apply trim offset
+        width += self.yaw_pwm_trim
+        width, valid = self.validate_pwidth(width)
+        self.set_pwidth(self.YAW_CHANNEL, width)
+        if not valid:
+            print("WARNING: Yaw out of range!")
+
+    def validate_pwidth(self, width):
         """Verifies that the PWM signals are in the accepted range.
 
         If not, the MAX_WIDTH or MIN_WIDTH is returned
         """
         if(width > self.MAX_WIDTH):
-            return self.convert_width(self.MAX_WIDTH), False
+            return self.MAX_WIDTH, False
         elif(width < self.MIN_WIDTH):
-            return self.convert_width(self.MIN_WIDTH), False
+            return self.MIN_WIDTH, False
         else:
-            return self.convert_width(width), True
-
-    def reset_channels(self):
-        """Reset channels 0-6 on the feather board; used as cleanup measure"""
-        for i in range(6):
-            self.set_pwidth(i, self.MID_WIDTH)
+            return width, True
 
     def get_data(self, arg):
         """
