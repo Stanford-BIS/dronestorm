@@ -24,8 +24,12 @@ MAX_W = 0.0019     # positive pulse width (s) for max value
 
 TICKS = 4096       # 4096 ticks per period
 
-k = 0.023/0.022    # calibrate to your specific feather board
+period = 0.022     # desired period (s)
+
+k_period = 0.023/period # board specific calibration factor
+# calibrate to your specific feather board
+# requested_period = k_period * target_period
 
 pwm = Adafruit_PCA9685.PCA9685()
-pwm.set_pwm_freq(1./(0.022*k)) # 22ms period
+pwm.set_pwm_freq(1./(k_period*period))
 pwm.set_all_pwm(0, int(TICKS*(MID_W/TGT_PERIOD)))
