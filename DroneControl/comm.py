@@ -177,12 +177,12 @@ class DroneComm(object):
     def get_roll(self):
         """Returns the roll angle"""
         self.board.getData(MultiWii.ATTITUDE)
-        return self.board.attitude["angy"]
+        return self.board.attitude["angx"]
 
     def get_pitch(self):
         """Returns the pitch angle"""
         self.board.getData(MultiWii.ATTITUDE)
-        return self.board.attitude["angx"]
+        return self.board.attitude["angy"]
 
     def get_yaw(self):
         """Returns the yaw angle"""
