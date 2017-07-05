@@ -76,8 +76,12 @@ class DroneComm(object):
         pulse_length //= 4096     # 12 bits of resolution
         pulse *= 1000
         pulse //= pulse_length
+        pulse = int(pulse)
 
-        self.pwm.set_pwm(channel, 0, int(pulse))
+        # apply trim offset
+        # apply calibration
+
+        self.pwm.set_pwm(channel, 0, pulse)
 
     def convert_width(self, width):
         """Scales desired pusle width before request to Adafruit library"""
@@ -108,8 +112,8 @@ class DroneComm(object):
             print("WARNING: Roll out of range!")
 
     def is_valid(self, width):
-        """
-        Verifies that the PWM signals are in the accepted range.
+        """Verifies that the PWM signals are in the accepted range.
+
         If not, the MAX_WIDTH or MIN_WIDTH is returned
         """
         if(width > self.MAX_WIDTH):
