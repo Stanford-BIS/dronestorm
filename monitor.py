@@ -1,9 +1,9 @@
 """Monitor drone sensor values
 """
-from DroneControl import DroneControl
+from DroneControl import DroneComm
 import sys
 
-drone = DroneControl()
+drone = DroneComm()
 
 try:
     while (True):

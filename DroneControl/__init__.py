@@ -1,1 +1,1 @@
-from droneControl import DroneControl
+from comm import DroneComm

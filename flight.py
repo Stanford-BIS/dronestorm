@@ -1,10 +1,10 @@
-from DroneControl import DroneControl
+from DroneControl import DroneComm
 
 # Flight stabilization app using the DroneControl Library
 # Current roll and pitch values are acquired from the flight controller
 # then pulse width signals are determined to fix the error
 
-drone = DroneControl()
+drone = DroneComm()
 
 # Proportion coefficients: how strongly the error should be corrected
 K_pitch = .01

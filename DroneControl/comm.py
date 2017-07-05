@@ -1,14 +1,19 @@
 """
-Library to acquire Telemetry Data from Naze32 board (angx, angy and heading).
-Furthermore, contains methods to send Roll/Pitch/Yaw signals to the Naze32
-flight controller from a Raspberry pi via a Feather board using PWM signals.
+Library to communicate with the Naze32 flight control board.
+Receives telemetry data: angx, angy and heading
+Transmits attitude commands: roll, pitch, yaw
 """
 
 from __future__ import division
 from pyMultiwii import MultiWii
 import Adafruit_PCA9685, time
 
-class DroneControl(object):
+class DroneComm(object):
+    """Handles communication to and from the drone.
+
+    Receives data over the USB with Multiwii protocol
+    Transmits data via an I2C interface to an Adafruit PWM generator
+    """
     # Range of Values (Pulse Width): 1.1ms -> 1.9ms
     MIN_WIDTH = 1.10
     MAX_WIDTH = 1.90
@@ -19,24 +24,24 @@ class DroneControl(object):
     PITCH_CHANNEL = 2
     ROLL_CHANNEL = 3
 
-    # Scaling factor to convert desired PWM widths to Adafruit signals
-    SCALING_FACTOR = 1.4 / 1.5
+    # Calibration factor to compensate for mismatch between requested pwm width
+    # and width implemented by Adafruit PWM generator
+    # Use:
+    #     requested_p_signal = K_PWM * target_p_width
+    # when requesting a PWM signal with positive witdth target_p_width 
+    K_PWM = 1.4 / 1.5
 
     def __init__(self):
-        '''
-        Initializes PWM and MultiWii objects
-        '''
+        """Initializes PWM and MultiWii objects"""
         self.pwm = Adafruit_PCA9685.PCA9685()
         self.pwm.set_pwm_freq(1/.023)    # ~45.45 Hz
         self.board = MultiWii("/dev/ttyUSB0")
         self.reset_channels() # Used to activate the Featherboard
 
     def set_servo_pulse(self, channel, pulse):
-        '''
-        Used to set a certain Pulse Width on a channel
-        '''
+        """Set a certain Pulse Width on a channel"""
         pulse_length = 1000000    # 1,000,000 us per second
-        pulse_length //= 1/.022       # ~45.45 Hz
+        pulse_length //= 1/.022   # ~45.45 Hz
         pulse_length //= 4096     # 12 bits of resolution
         pulse *= 1000
         pulse //= pulse_length
@@ -44,15 +49,11 @@ class DroneControl(object):
         self.pwm.set_pwm(channel, 0, int(pulse))
 
     def convert_width(self, width):
-        '''
-        Internal conversion method to send PWM signals to Adafruit library
-        '''
-        return width * self.SCALING_FACTOR
+        """Scales desired pusle width before request to Adafruit library"""
+        return width * self.K_PWM
 
     def set_yaw(self, width):
-        '''
-        Sets the Yaw to a desired PWM width
-        '''
+        """Sets the Yaw to a desired PWM width"""
         width_c, valid = self.is_valid(width)
         self.set_servo_pulse(self.YAW_CHANNEL, width_c)
 
@@ -114,20 +115,17 @@ class DroneControl(object):
             self.board.closeSerial()
 
     def get_roll(self):
-        """Returns the roll angle
-        """
+        """Returns the roll angle"""
         self.board.getData(MultiWii.ATTITUDE)
         return self.board.attitude["angy"]
 
     def get_pitch(self):
-        """Returns the pitch angle
-        """
+        """Returns the pitch angle"""
         self.board.getData(MultiWii.ATTITUDE)
         return self.board.attitude["angx"]
 
     def get_yaw(self):
-        """Returns the yaw angle
-        """
+        """Returns the yaw angle"""
         self.board.getData(MultiWii.ATTITUDE)
         return self.board.attitude["heading"]
 
