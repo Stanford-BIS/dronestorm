@@ -35,6 +35,9 @@ class DroneComm(object):
     MID_WIDTH = 0.0015
     MAX_WIDTH = 0.0019
 
+    # Max change in pulse width from mid posision: 0.4ms
+    MAX_DELTA_PWIDTH = 0.0004
+
     # time precision of feather pwm signal
     # each pwm cycle is divided into TICKS units of time
     TICKS = 4096
@@ -115,7 +118,7 @@ class DroneComm(object):
         width, valid = self.validate_pwidth(width)
         self.set_pwidth(self.ROLL_CHANNEL, width)
         if not valid:
-            print("WARNING: Roll out of range!")
+            print("WARNING: Requested roll pwidth out of range!")
 
     def set_pitch_pwidth(self, width):
         """Apply trim and set the pwm Pitch signal's positive pulse width
@@ -130,7 +133,7 @@ class DroneComm(object):
         width, valid = self.validate_pwidth(width)
         self.set_pwidth(self.PITCH_CHANNEL, width)
         if not valid:
-            print("WARNING: Pitch out of range!")
+            print("WARNING: Requested pitch pwidth out of range!")
 
     def set_yaw_pwidth(self, width):
         """Apply trim and set the pwm Yaw signal's positive pulse width
@@ -145,11 +148,12 @@ class DroneComm(object):
         width, valid = self.validate_pwidth(width)
         self.set_pwidth(self.YAW_CHANNEL, width)
         if not valid:
-            print("WARNING: Yaw out of range!")
+            print("WARNING: Requested yaw pwidth out of range!")
 
     def validate_pwidth(self, width):
-        """Verifies that the PWM signals are in the accepted range.
-
+        """Validate the pwm signal's positive pulse width
+        
+        Checks that the width is within the accepted range
         If not, the MAX_WIDTH or MIN_WIDTH is returned
         """
         if(width > self.MAX_WIDTH):
@@ -158,6 +162,61 @@ class DroneComm(object):
             return self.MIN_WIDTH, False
         else:
             return width, True
+
+    def set_roll_rate(self, rate):
+        """Set the Roll rate
+        
+        Parameters
+        ----------
+        width: float [-1, 1]
+            rate (scaled by max rate)
+        """
+        rate, valid = self.validate_rate(rate)
+        width = self.MID_WIDTH + rate*self.MAX_DELTA_PWIDTH
+        self.set_pwidth(self.ROLL_CHANNEL, width)
+        if not valid:
+            print("WARNING: Requested roll rate out of range!")
+
+    def set_pitch_rate(self, rate):
+        """Set the Pitch rate
+        
+        Parameters
+        ----------
+        width: float [-1, 1]
+            rate (scaled by max rate)
+        """
+        rate, valid = self.validate_rate(rate)
+        width = self.MID_WIDTH + rate*self.MAX_DELTA_PWIDTH
+        self.set_pwidth(self.PITCH_CHANNEL, width)
+        if not valid:
+            print("WARNING: Requested pitch rate out of range!")
+
+    def set_yaw_rate(self, rate):
+        """Set the Yaw rate
+        
+        Parameters
+        ----------
+        width: float [-1, 1]
+            rate (scaled by max rate)
+        """
+        rate, valid = self.validate_rate(rate)
+        width = self.MID_WIDTH + rate*self.MAX_DELTA_PWIDTH
+        self.set_pwidth(self.YAW_CHANNEL, width)
+        if not valid:
+            print("WARNING: Requested yaw rate out of range!")
+
+    def validate_rate(self, rate):
+        """Validate the requested channel rate is valid
+        
+        Checks that the width is within [-1, 1]
+        Clips to range limit
+        """
+        if(rate > 1):
+            return 1, False
+        elif(rate < -1):
+            return -1, False
+        else:
+            return rate, True
 
     def get_data(self, arg):
         """
