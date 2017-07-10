@@ -253,8 +253,8 @@ class DroneComm(object):
         Used to gracefully exit and close the serial port
         """
         self.reset_channels()
-        self.board = MultiWii("/dev/ttyUSB0")
-        self.board.closeSerial()
+        if self.board is not None:
+            self.board.closeSerial()
 
     def control_example(self):
         """
