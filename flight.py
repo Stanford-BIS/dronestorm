@@ -6,8 +6,8 @@ import time
 # Current roll and pitch values are acquired from the flight controller
 # then pulse width signals are determined to fix the error
 
-# drone = DroneComm(roll_pwm_trim=-5, pitch_pwm_trim=4)
-drone = DroneComm()
+drone = DroneComm(roll_pwm_trim=-5, pitch_pwm_trim=4)
+# drone = DroneComm()
 
 # Proportion coefficients: how strongly the error should be corrected
 K_roll  = 4 * 1./180.

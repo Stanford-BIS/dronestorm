@@ -101,3 +101,6 @@ ENV/
 
 # vim
 *.swp
+
+# redis
+*.rdb
