@@ -1,4 +1,4 @@
-from DroneControl import DroneComm
+from DroneControl import DroneComm, PID
 import sys
 import time
 import numpy as np
@@ -28,31 +28,26 @@ d_error_yaw = 0
 # calibration Values
 yaw0 = drone.get_yaw()
 
+def center_yaw_error(error_yaw):
+    if error_yaw > 180:
+        error_yaw -= 360
+    elif error_yaw < -180:
+        error_yaw += 360
+    return error_yaw
+
+yaw_controller = PID(
+    Kp_yaw, Kd_yaw, Ki_yaw,
+    lambda : yaw0, drone.get_yaw, drone.get_dyaw,
+    center_yaw_error, out_limit)
+
 # run the control
 try:
     while (True):
-        yaw = drone.get_yaw()
-        # Error between desired and actual roll/pitch
-        error_yaw = yaw0 - yaw
-        if error_yaw > 180:
-            error_yaw -= 360
-        elif error_yaw < -180:
-            error_yaw += 360
-
-        dyaw = drone.get_dyaw()
-        d_error_yaw = dyaw
-
-        int_error_yaw += error_yaw
-        int_error_yaw = np.clip(int_error_yaw,
-            -int_error_limit, int_error_limit)
-
-        output_yaw = np.clip(
-            Kp_yaw * error_yaw + Ki_yaw * int_error_yaw + Kd_yaw * d_error_yaw,
-            -out_limit, out_limit)
-
+        output_yaw = yaw_controller.step()
         sys.stdout.write(
             "yaw0:%5.1f yaw:%5.1f dyaw:%5.0f output_yaw:%6.3f\r"%
-            (yaw0, yaw, dyaw, output_yaw))
+            (yaw_controller.ref, yaw_controller.state, yaw_controller.dstate,
+             output_yaw))
         sys.stdout.flush()
 
         # Set corrective rates
