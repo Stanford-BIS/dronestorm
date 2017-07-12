@@ -8,7 +8,6 @@ import numpy as np
 # then pulse width signals are determined to fix the error
 
 drone = DroneComm()
-dt = 0.01
 
 # Zigler Nichols estimated tuning parameters
 Ku_yaw = 0.2
@@ -24,17 +23,12 @@ error_yaw = 0
 int_error_yaw = 0
 int_error_limit = out_limit
 d_error_yaw = 0
-d_error_prev = np.zeros(3)
-d_error_idx = 0
-d_error_yaw_filt = 0.9
-error_yaw_prev = 0
 
 # Start program by placing drone on a flat surface to ensure accurate
 # calibration Values
-
-dN = 5
 yaw0 = drone.get_yaw()
-dyaw_samples = np.zeros(dN)
+
+# run the control
 try:
     while (True):
         yaw = drone.get_yaw()
