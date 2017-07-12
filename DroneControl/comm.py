@@ -286,18 +286,18 @@ class DroneComm(object):
         self.board.getData(MultiWii.RAW_IMU)
         return self.board.rawIMU["az"]
     
-    def get_gx(self):
-        """Returns the x angular velocity"""
+    def get_droll(self):
+        """Returns the roll angular velocity"""
         self.board.getData(MultiWii.RAW_IMU)
         return self.board.rawIMU["gx"]
     
-    def get_gy(self):
-        """Returns the y angular velocity"""
+    def get_dpitch(self):
+        """Returns the pitch angular velocity"""
         self.board.getData(MultiWii.RAW_IMU)
         return self.board.rawIMU["gy"]
     
-    def get_gz(self):
-        """Returns the z angular velocity"""
+    def get_dyaw(self):
+        """Returns the yaw angular velocity"""
         self.board.getData(MultiWii.RAW_IMU)
         return self.board.rawIMU["gz"]
 

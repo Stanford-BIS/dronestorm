@@ -5,24 +5,26 @@ import sys
 
 drone = DroneComm(pwm_ctrl=False)
 
+print('  roll  droll | pitch dpitch |   yaw   dyaw |    ax     ay     az')
 try:
     while (True):
         # Fetching current pitch/roll values
         roll = drone.get_roll()
         pitch = drone.get_pitch()
         yaw = drone.get_yaw()
+        droll = drone.get_droll()
+        dpitch = drone.get_dpitch()
+        dyaw = drone.get_dyaw()
 
         ax = drone.get_ax()
         ay = drone.get_ay()
         az = drone.get_az()
-        gx = drone.get_gx()
-        gy = drone.get_gy()
-        gz = drone.get_gz()
 
         sys.stdout.write(
-            "roll:%6.1f pitch:%5.1f yaw:%5.1f "%(roll, pitch, yaw) +
-            "ax:%5.0f ay:%5.0f az:%5.0f "%(ax, ay, az) +
-            "gx:%5.0f gy:%5.0f gz:%5.0f\r"%(gx, gy, gz))
+            "%6.1f  %5.0f | "%(roll, droll) +
+            "%5.1f  %5.0f | "%(pitch, dpitch) +
+            "%5.1f  %5.0f | "%(yaw, dyaw) +
+            "%5.0f  %5.0f  %5.0f\r"%(ax, ay, az))
         sys.stdout.flush()
 except (KeyboardInterrupt, SystemExit):
     # Graceful Exit
