@@ -21,8 +21,8 @@ try:
 
         sys.stdout.write(
             "roll:%6.1f pitch:%5.1f yaw:%5.1f "%(roll, pitch, yaw) +
-            "ax:%f ay:%f az:%f "%(ax, ay, az) +
-            "gx:%f gy:%f gz:%f\r"%(gx, gy, gz))
+            "ax:%5.0f ay:%5.0f az:%5.0f "%(ax, ay, az) +
+            "gx:%5.0f gy:%5.0f gz:%5.0f\r"%(gx, gy, gz))
         sys.stdout.flush()
 except (KeyboardInterrupt, SystemExit):
     # Graceful Exit
