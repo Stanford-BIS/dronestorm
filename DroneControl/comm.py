@@ -5,7 +5,7 @@ Transmits attitude commands: roll, pitch, yaw
 """
 
 from __future__ import division
-from pyMultiwii import MultiWii
+from .pyMultiwii import MultiWii
 import Adafruit_PCA9685, time
 
 class DroneComm(object):
@@ -16,6 +16,8 @@ class DroneComm(object):
 
     Paramters
     ---------
+    pwm_ctrl: bool
+        enable pwm control (default True)
     period: float
         pwm period (default 22ms)
     k_period: float
@@ -55,7 +57,8 @@ class DroneComm(object):
     DEFAULT_K_PERIOD = 0.023 / 0.022 # 23ms/22ms
 
     def __init__(
-            self, period=0.022, k_period=None,
+            self, pwm_ctrl=True,
+            period=0.022, k_period=None,
             roll_pwm_trim=0, pitch_pwm_trim=0, yaw_pwm_trim=0,
             port="/dev/ttyUSB0"):
         self.period = period
@@ -68,14 +71,17 @@ class DroneComm(object):
         if k_period is None:
             k_period = self.DEFAULT_K_PERIOD
 
-        self.pwm = Adafruit_PCA9685.PCA9685()
-        self.pwm.set_pwm_freq(1./(k_period*period))
+        if pwm_ctrl:
+            self.pwm = Adafruit_PCA9685.PCA9685()
+            self.pwm.set_pwm_freq(1./(k_period*period))
+            self.reset_channels()
+        else:
+            self.pwm = None
+
         if port is None:
             self.board = None
         else:
             self.board = MultiWii(port)
-
-        self.reset_channels()
 
     def reset_channels(self):
         """Reset channels 0-6 on the feather board
@@ -218,7 +224,7 @@ class DroneComm(object):
         else:
             return rate, True
 
-    def get_data(self, arg):
+    def get_attitude(self, arg):
         """
         Returns the Attitude telemetry data from the Naze32 flight controller
 
@@ -229,6 +235,23 @@ class DroneComm(object):
 
         if arg == 'angx' or arg == 'angy' or arg == 'heading':
             return self.board.attitude[arg]
+        else:
+            print("Invalid argument\n")
+            self.board.closeSerial()
+
+    def get_imu(self, arg):
+        """
+        Returns the IMU telemetry data from the Naze32 flight controller
+
+        param:
+            arg : string
+                {"ax", "ay", "az", "gx", "gy", "gz", "mx", "my", "mz"}
+        return: {ax, ay, az, gx, gy, gz, mx, my, mz}
+        """
+        self.board.getData(MultiWii.RAW_IMU)
+
+        if arg in ["ax", "ay", "az", "gx", "gy", "gz", "mx", "my", "mz"]:
+            return self.board.rawIMU[arg]
         else:
             print("Invalid argument\n")
             self.board.closeSerial()
@@ -248,13 +271,44 @@ class DroneComm(object):
         self.board.getData(MultiWii.ATTITUDE)
         return self.board.attitude["heading"]
 
+    def get_ax(self):
+        """Returns the x acceleration"""
+        self.board.getData(MultiWii.RAW_IMU)
+        return self.board.rawIMU["ax"]
+    
+    def get_ay(self):
+        """Returns the y acceleration"""
+        self.board.getData(MultiWii.RAW_IMU)
+        return self.board.rawIMU["ay"]
+    
+    def get_az(self):
+        """Returns the z acceleration"""
+        self.board.getData(MultiWii.RAW_IMU)
+        return self.board.rawIMU["az"]
+    
+    def get_gx(self):
+        """Returns the x angular velocity"""
+        self.board.getData(MultiWii.RAW_IMU)
+        return self.board.rawIMU["gx"]
+    
+    def get_gy(self):
+        """Returns the y angular velocity"""
+        self.board.getData(MultiWii.RAW_IMU)
+        return self.board.rawIMU["gy"]
+    
+    def get_gz(self):
+        """Returns the z angular velocity"""
+        self.board.getData(MultiWii.RAW_IMU)
+        return self.board.rawIMU["gz"]
+
     def exit(self):
         """
         Used to gracefully exit and close the serial port
         """
-        self.reset_channels()
-        self.board = MultiWii("/dev/ttyUSB0")
-        self.board.closeSerial()
+        if self.pwm is not None:
+            self.reset_channels()
+        if self.board is not None:
+            self.board.closeSerial()
 
     def control_example(self):
         """

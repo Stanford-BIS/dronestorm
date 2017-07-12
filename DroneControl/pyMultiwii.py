@@ -86,8 +86,9 @@ class MultiWii(object):
                     time.sleep(1)
                 else:
                     time.sleep(1)
-        except Exception, error:
-            print "\n\nError opening "+self.ser.port+" port.\n"+str(error)+"\n\n"
+        except(Exception) as error:
+            print("\n\nError opening "+self.ser.port+
+                " port.\n"+str(error)+"\n\n")
 
     """Function for sending a command to the board"""
     def sendCMD(self, data_length, code, data):
@@ -99,7 +100,7 @@ class MultiWii(object):
         try:
             b = None
             b = self.ser.write(struct.pack('<3c2B%dHB' % len(data), *total_data))
-        except Exception, error:
+        except(Exception) as error:
             pass
 
     """Function for sending a command to the board and receive attitude"""
@@ -141,7 +142,7 @@ class MultiWii(object):
             self.attitude['elapsed']=round(elapsed,3)
             self.attitude['timestamp']="%0.2f" % (time.time(),)
             return self.attitude
-        except Exception, error:
+        except(Exception) as error:
             #print "\n\nError in sendCMDreceiveATT."
             #print "("+str(error)+")\n\n"
             pass
@@ -182,7 +183,7 @@ class MultiWii(object):
         for i in np.arange(1,len(pd),2):
             nd.append(pd[i]+pd[i+1]*256)
         data = pd
-        print "PID sending:",data
+        print("PID sending:",data)
         self.sendCMD(30,MultiWii.SET_PID,data)
         self.sendCMD(0,MultiWii.EEPROM_WRITE,[])
 
@@ -267,7 +268,7 @@ class MultiWii(object):
                 return self.PIDcoef
             else:
                 return "No return error!"
-        except Exception, error:
+        except(Exception) as error:
             #print error
             pass
 
@@ -318,7 +319,7 @@ class MultiWii(object):
                     self.motor['m4']=float(temp[3])
                     self.motor['elapsed']="%0.3f" % (elapsed,)
                     self.motor['timestamp']="%0.2f" % (time.time(),)
-            except Exception, error:
+            except(Exception) as error:
                 pass
 
     def closeSerial(self):
@@ -370,5 +371,5 @@ class MultiWii(object):
                 return self.message
             else:
                 return "No return error!"
-        except Exception, error:
-            print error
+        except(Exception) as error:
+            print(error)

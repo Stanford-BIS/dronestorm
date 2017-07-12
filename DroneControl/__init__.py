@@ -1,1 +1,1 @@
-from comm import DroneComm
+from .comm import DroneComm
