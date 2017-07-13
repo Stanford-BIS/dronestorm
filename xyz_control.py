@@ -11,9 +11,13 @@ import numpy as np
 drone = DroneComm()
 r = redis.StrictRedis()
 
-roll0 = drone.get_roll()
-# pitch0 = drone.get_pitch()
-yaw_cal = calibrate_april_imu_yaw(r, drone)
+try:
+    yaw_cal = calibrate_april_imu_yaw(r, drone)
+except (KeyboardInterrupt, SystemExit):
+    # Graceful Exit
+    drone.exit()
+    exit()
+
 # yaw_cal = 0
 x0 = float(r.get('y'))
 y0 = float(r.get('z'))
@@ -29,8 +33,6 @@ Ki_x  = 0.
 out_x_limit = 10.0
 
 error_x= 0
-int_error_x= 0
-int_error_x_limit = out_x_limit
 d_error_x= 0
 
 # y parameters
@@ -42,8 +44,6 @@ Ki_y  = 0.
 out_y_limit = 10.0
 
 error_y= 0
-int_error_y= 0
-int_error_y_limit = out_y_limit
 d_error_y= 0
  
 # yaw parameters
@@ -58,8 +58,6 @@ Ki_yaw  = 0.
 out_yaw_limit = 0.
 
 error_yaw = 0
-int_error_yaw = 0
-int_error_yaw_limit = out_yaw_limit
 d_error_yaw = 0
 
 # roll parameters
@@ -72,7 +70,6 @@ out_roll_limit = 1.0
 
 error_roll = 0
 int_error_roll = 0
-int_error_roll_limit = out_roll_limit
 d_error_roll = 0
 
 # pitch parameters
@@ -84,11 +81,9 @@ Ki_pitch  = 0.
 out_pitch_limit = 0.0
 
 error_pitch = 0
-int_error_pitch = 0
-int_error_pitch_limit = out_pitch_limit
 d_error_pitch = 0
 
-############### Start program by placing drone on a flat surface to ensure accurate
+######### Start program by placing drone on a flat surface to calibrate origin
 
 def center_error(error):
     if error > 180:
@@ -97,6 +92,10 @@ def center_error(error):
         error += 360
     return error
 
+drone.update_imu()
+drone.update_attitude()
+roll0 = drone.get_roll()
+pitch0 = drone.get_pitch()
 yaw0 = drone.get_yaw()
 
 x_controller = PID(
@@ -118,19 +117,24 @@ def compute_pitch0():
     return p0
 
 yaw_controller = PID(
-    Kp_yaw, Kd_yaw, Ki_yaw,
-    lambda:yaw0, drone.get_yaw, drone.get_dyaw,
-    center_error, out_yaw_limit)
+    kp = Kp_yaw, kd = Kd_yaw, ki = Ki_yaw,
+    get_state = drone.get_yaw, get_dstate = lambda: -drone.get_dyaw(),
+    get_ref = lambda:yaw0,
+    center_error = center_error,
+    out_limit=out_yaw_limit)
 
 roll_controller = PID(
-    Kp_roll, Kd_roll, Ki_roll,
-    compute_roll0, drone.get_roll, drone.get_droll,
-    lambda x:x, out_roll_limit)
+    kp = Kp_roll, kd = Kd_roll, ki = Ki_roll,
+    get_state = drone.get_roll, get_dstate = drone.get_droll,
+    get_ref = compute_roll0,
+    center_error = center_error,
+    out_limit=out_roll_limit)
 
 pitch_controller = PID(
-    Kp_pitch, Kd_pitch, Ki_pitch,
-    compute_pitch0, drone.get_pitch, drone.get_dpitch,
-    lambda x: x, out_pitch_limit)
+    kp = Kp_pitch, kd = Kd_pitch, ki = Ki_pitch,
+    get_state = drone.get_pitch, get_dstate = drone.get_dpitch,
+    get_ref = compute_pitch0,
+    out_limit=out_pitch_limit)
 
 ################ run the control ##############################
 

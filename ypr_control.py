@@ -69,14 +69,14 @@ yaw_controller = PID(
 
 roll_controller = PID(
     kp = Kp_roll, kd = Kd_roll, ki = Ki_roll,
-    get_state = drone.get_roll, get_dstate = lambda: drone.get_droll(),
+    get_state = drone.get_roll, get_dstate = drone.get_droll,
     get_ref = lambda:roll0,
     center_error = center_error,
     out_limit=out_roll_limit)
 
 pitch_controller = PID(
     kp = Kp_pitch, kd = Kd_pitch, ki = Ki_pitch,
-    get_state = drone.get_pitch, get_dstate = lambda: -drone.get_dpitch(),
+    get_state = drone.get_pitch, get_dstate = drone.get_dpitch,
     get_ref = lambda:pitch0,
     center_error = center_error,
     out_limit=out_pitch_limit)
