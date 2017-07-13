@@ -87,6 +87,9 @@ pitch_controller = PID(
 print('   ry     y    dy     oy |    rr     r    dr     or |    rp      p   dp     op')
 try:
     while (True):
+        # update telemetry data
+        drone.update_imu()
+        drone.update_attitude()
         #step controllers
         output_yaw = yaw_controller.step()
         sys.stdout.write(

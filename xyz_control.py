@@ -13,8 +13,8 @@ r = redis.StrictRedis()
 
 roll0 = drone.get_roll()
 pitch0 = drone.get_pitch()
-yaw_cal = calibrate_april_imu_yaw(r, drone)
-# yaw_cal = 0
+# yaw_cal = calibrate_april_imu_yaw(r, drone)
+yaw_cal = 0
 x0 = float(r.get('y'))
 y0 = float(r.get('z'))
 
@@ -107,11 +107,6 @@ y_controller = PID(
     lambda : y0, lambda : float(r.get('z')), lambda : 0,
     lambda e : e, out_y_limit)
 
-yaw_controller = PID(
-    Kp_yaw, Kd_yaw, Ki_yaw,
-    lambda:yaw0, drone.get_yaw, drone.get_dyaw,
-    center_error, out_yaw_limit)
-
 def compute_roll0():
     r0 = -y_controller.step()
     return r0
@@ -119,6 +114,11 @@ def compute_roll0():
 def compute_pitch0():
     p0 = x_controller.step()
     return p0
+
+yaw_controller = PID(
+    Kp_yaw, Kd_yaw, Ki_yaw,
+    lambda:yaw0, drone.get_yaw, drone.get_dyaw,
+    center_error, out_yaw_limit)
 
 roll_controller = PID(
     Kp_roll, Kd_roll, Ki_roll,
@@ -130,12 +130,15 @@ pitch_controller = PID(
     compute_pitch0, drone.get_pitch, drone.get_dpitch,
     lambda x: x, out_pitch_limit)
 
-###############3 run the control
+################ run the control ##############################
 
 print('   ry     y    dy     oy |    rr     r    dr     or |    rp     p   dp     op |    xr     x    yr     y ')
 try:
     while (True):
-        #step controllers
+        # update telemetry data
+        drone.update_imu()
+        drone.update_attitude()
+        # step controllers
         output_yaw = yaw_controller.step()
         sys.stdout.write(
             "%5.1f %5.1f %5.0f %6.3f | "%

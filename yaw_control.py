@@ -43,6 +43,10 @@ yaw_controller = PID(
 # run the control
 try:
     while (True):
+        # update telemetry data
+        drone.update_imu()
+        drone.update_attitude()
+        # step controllers
         output_yaw = yaw_controller.step()
         sys.stdout.write(
             "yaw0:%5.1f yaw:%5.1f dyaw:%5.0f output_yaw:%6.3f\r"%
