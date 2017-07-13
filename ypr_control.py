@@ -18,7 +18,7 @@ Kp_yaw  = Ku_yaw * 0.45
 Kd_yaw  = 0.2*Kp_yaw * Tu_yaw * .125
 Ki_yaw  = 0.
 
-out_yaw_limit = 0.0
+out_yaw_limit = 1.0
 
 error_yaw = 0
 int_error_yaw = 0
@@ -40,14 +40,14 @@ d_error_roll = 0
 
 #pitch parameters
 # Proportion coefficients: how strongly the error should be corrected
-Kp_pitch  = 0.02
-Kd_pitch  = 0.001
+Kp_pitch  = 0.02*0.6
+Kd_pitch  = 0.0001
 Ki_pitch  = 0.
 # Kp_pitch  = Ku_pitch * 0.45
 # Kd_pitch  = 0.2*Kp_pitch * Tu_pitch * .125
 # Ki_pitch  = 0.
 
-out_pitch_limit = 0.0
+out_pitch_limit = 1.0
 
 error_pitch = 0
 int_error_pitch = 0
@@ -84,7 +84,10 @@ pitch_controller = PID(
 
 ################ run the control
 
-print('   ry     y    dy     oy |    rr     r    dr     or |    rp      p   dp     op')
+print(
+    '   ry     y    dy     oy |' +
+    '    rr     r    dr     or |' +
+    '    rp     p    dp     op')
 try:
     while (True):
         # update telemetry data
@@ -100,14 +103,14 @@ try:
         output_roll = roll_controller.step()
         sys.stdout.write(
             "%5.1f %5.1f %5.0f %6.3f | "%
-            (roll_controller.ref, roll_controller.state, roll_controller.dstate,
-             output_roll))
+            (roll_controller.ref, roll_controller.state,
+             roll_controller.dstate, output_roll))
 
         output_pitch = pitch_controller.step()
         sys.stdout.write(
             "%5.1f %5.1f %5.0f %6.3f\r"%
-            (pitch_controller.ref, pitch_controller.state, pitch_controller.dstate,
-             output_pitch))
+            (pitch_controller.ref, pitch_controller.state,
+             pitch_controller.dstate, output_pitch))
 
         sys.stdout.flush()
 

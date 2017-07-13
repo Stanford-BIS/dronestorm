@@ -12,11 +12,13 @@ drone = DroneComm()
 r = redis.StrictRedis()
 
 roll0 = drone.get_roll()
-pitch0 = drone.get_pitch()
-# yaw_cal = calibrate_april_imu_yaw(r, drone)
-yaw_cal = 0
+# pitch0 = drone.get_pitch()
+yaw_cal = calibrate_april_imu_yaw(r, drone)
+# yaw_cal = 0
 x0 = float(r.get('y'))
 y0 = float(r.get('z'))
+r.set('rx', 0.0)
+r.set('ry', 0.0)
 
 # x parameters
 # Proportion coefficients: how strongly the error should be corrected
@@ -24,7 +26,7 @@ Kp_x  = 10.
 Kd_x  = 0.
 Ki_x  = 0.
 
-out_x_limit = 5.0
+out_x_limit = 10.0
 
 error_x= 0
 int_error_x= 0
@@ -33,11 +35,11 @@ d_error_x= 0
 
 # y parameters
 # Proportion coefficients: how strongly the error should be corrected
-Kp_y  = 20.
+Kp_y  = 10.
 Kd_y  = 0.
 Ki_y  = 0.
 
-out_y_limit = 20.0
+out_y_limit = 10.0
 
 error_y= 0
 int_error_y= 0
@@ -75,8 +77,8 @@ d_error_roll = 0
 
 # pitch parameters
 # Proportion coefficients: how strongly the error should be corrected
-Kp_pitch  = 0.02
-Kd_pitch  = 0.001
+Kp_pitch  = 0.02*.6
+Kd_pitch  = 0.0001
 Ki_pitch  = 0.
 
 out_pitch_limit = 0.0
@@ -99,12 +101,12 @@ yaw0 = drone.get_yaw()
 
 x_controller = PID(
     Kp_x, Kd_x, Ki_x,
-    lambda : x0, lambda : float(r.get('y')), lambda : 0,
+    lambda : x0 + float(r.get('rx')), lambda : float(r.get('y')), lambda : 0,
     lambda e : e, out_x_limit)
 
 y_controller = PID(
     Kp_y, Kd_y, Ki_y,
-    lambda : y0, lambda : float(r.get('z')), lambda : 0,
+    lambda : y0 + float(r.get('ry')), lambda : float(r.get('z')), lambda : 0,
     lambda e : e, out_y_limit)
 
 def compute_roll0():
@@ -132,7 +134,11 @@ pitch_controller = PID(
 
 ################ run the control ##############################
 
-print('   ry     y    dy     oy |    rr     r    dr     or |    rp     p   dp     op |    xr     x    yr     y ')
+print(
+    '   ry     y    dy     oy |' +
+    '    rr     r    dr     or |' +
+    '    rp     p    dp     op |'+
+    '    xr     x    yr     y ')
 try:
     while (True):
         # update telemetry data
@@ -148,13 +154,14 @@ try:
         output_roll = roll_controller.step()
         sys.stdout.write(
             "%5.1f %5.1f %5.0f %6.3f | "%
-            (roll_controller.ref, roll_controller.state, roll_controller.dstate,
-             output_roll))
+            (roll_controller.ref, roll_controller.state,
+             roll_controller.dstate,output_roll))
 
         output_pitch = pitch_controller.step()
         sys.stdout.write(
             "%5.1f %5.1f %5.0f %6.3f | "%
-            (pitch_controller.ref, pitch_controller.state, pitch_controller.dstate,
+            (pitch_controller.ref, pitch_controller.state,
+             pitch_controller.dstate,
              output_pitch))
         sys.stdout.flush()
 
