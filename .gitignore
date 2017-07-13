@@ -104,3 +104,6 @@ ENV/
 
 # redis
 *.rdb
+
+# random files
+*scratch.py

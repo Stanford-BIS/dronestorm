@@ -53,13 +53,25 @@ class MultiWii(object):
     """Class initialization"""
     def __init__(self, serPort):
         """Global variables of data"""
-        self.PIDcoef = {'rp':0,'ri':0,'rd':0,'pp':0,'pi':0,'pd':0,'yp':0,'yi':0,'yd':0}
-        self.rcChannels = {'roll':0,'pitch':0,'yaw':0,'throttle':0,'elapsed':0,'timestamp':0}
-        self.rawIMU = {'ax':0,'ay':0,'az':0,'gx':0,'gy':0,'gz':0,'mx':0,'my':0,'mz':0,'elapsed':0,'timestamp':0}
+        self.PIDcoef = {
+            'rp':0,'ri':0,'rd':0,
+            'pp':0,'pi':0,'pd':0,
+            'yp':0,'yi':0,'yd':0}
+        self.rcChannels = {
+            'roll':0,'pitch':0,'yaw':0,'throttle':0,'elapsed':0,'timestamp':0}
+        self.rawIMU = {
+            'ax':0,'ay':0,'az':0,
+            'gx':0,'gy':0,'gz':0,
+            'mx':0,'my':0,'mz':0,
+            'elapsed':0,'timestamp':0}
         self.motor = {'m1':0,'m2':0,'m3':0,'m4':0,'elapsed':0,'timestamp':0}
-        self.attitude = {'angx':0,'angy':0,'heading':0,'elapsed':0,'timestamp':0}
+        self.attitude = {
+            'angx':0,'angy':0,'heading':0,'elapsed':0,'timestamp':0}
         self.altitude = {'estalt':0,'vario':0,'elapsed':0,'timestamp':0}
-        self.message = {'angx':0,'angy':0,'heading':0,'roll':0,'pitch':0,'yaw':0,'throttle':0,'elapsed':0,'timestamp':0}
+        self.message = {
+            'angx':0,'angy':0,'heading':0,
+            'roll':0,'pitch':0,'yaw':0,'throttle':0,
+            'elapsed':0,'timestamp':0}
         self.temp = ();
         self.temp2 = ();
         self.elapsed = 0
@@ -87,7 +99,8 @@ class MultiWii(object):
                 else:
                     time.sleep(1)
         except(Exception) as error:
-            print("\n\nError opening "+self.ser.port+
+            print(
+                "\n\nError opening "+self.ser.port+
                 " port.\n"+str(error)+"\n\n")
 
     """Function for sending a command to the board"""
@@ -104,16 +117,6 @@ class MultiWii(object):
             pass
 
     """Function for sending a command to the board and receive attitude"""
-    """
-    Modification required on Multiwii firmware to Protocol.cpp in evaluateCommand:
-
-    case MSP_SET_RAW_RC:
-      s_struct_w((uint8_t*)&rcSerial,16);
-      rcSerialCount = 50; // 1s transition
-      s_struct((uint8_t*)&att,6);
-      break;
-
-    """
     def sendCMDreceiveATT(self, data_length, code, data):
         checksum = 0
         total_data = ['$', 'M', '<', data_length, code] + data
@@ -148,16 +151,6 @@ class MultiWii(object):
             pass
 
     """Function to arm / disarm """
-    """
-    Modification required on Multiwii firmware to Protocol.cpp in evaluateCommand:
-
-    case MSP_SET_RAW_RC:
-      s_struct_w((uint8_t*)&rcSerial,16);
-      rcSerialCount = 50; // 1s transition
-      s_struct((uint8_t*)&att,6);
-      break;
-
-    """
     def arm(self):
         timer = 0
         start = time.time()
@@ -166,7 +159,7 @@ class MultiWii(object):
             self.sendCMD(8,MultiWii.SET_RAW_RC,data)
             time.sleep(0.05)
             timer = timer + (time.time() - start)
-            start =  time.time()
+            start = time.time()
 
     def disarm(self):
         timer = 0
@@ -176,7 +169,7 @@ class MultiWii(object):
             self.sendCMD(8,MultiWii.SET_RAW_RC,data)
             time.sleep(0.05)
             timer = timer + (time.time() - start)
-            start =  time.time()
+            start = time.time()
 
     def setPID(self,pd):
         nd=[]
@@ -272,7 +265,10 @@ class MultiWii(object):
             #print error
             pass
 
-    """Function to receive a data packet from the board. Note: easier to use on threads"""
+    """
+    Function to receive a data packet from the board.
+    Note: easier to use on threads
+    """
     def getDataInf(self, cmd):
         while True:
             try:

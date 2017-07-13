@@ -224,81 +224,52 @@ class DroneComm(object):
         else:
             return rate, True
 
-    def get_attitude(self, arg):
+    def update_attitude(self):
         """
-        Returns the Attitude telemetry data from the Naze32 flight controller
-
-        param: MultiWii Object, {"angx", "angy", "heading"}
-        return: {angx, angy, heading}
+        Updates the Attitude telemetry data from the Naze32 flight controller
         """
         self.board.getData(MultiWii.ATTITUDE)
 
-        if arg == 'angx' or arg == 'angy' or arg == 'heading':
-            return self.board.attitude[arg]
-        else:
-            print("Invalid argument\n")
-            self.board.closeSerial()
-
-    def get_imu(self, arg):
+    def update_imu(self):
         """
-        Returns the IMU telemetry data from the Naze32 flight controller
-
-        param:
-            arg : string
-                {"ax", "ay", "az", "gx", "gy", "gz", "mx", "my", "mz"}
-        return: {ax, ay, az, gx, gy, gz, mx, my, mz}
+        Updates the IMU telemetry data from the Naze32 flight controller
         """
         self.board.getData(MultiWii.RAW_IMU)
 
-        if arg in ["ax", "ay", "az", "gx", "gy", "gz", "mx", "my", "mz"]:
-            return self.board.rawIMU[arg]
-        else:
-            print("Invalid argument\n")
-            self.board.closeSerial()
-
     def get_roll(self):
         """Returns the roll angle"""
-        self.board.getData(MultiWii.ATTITUDE)
         return self.board.attitude["angx"]
 
     def get_pitch(self):
         """Returns the pitch angle"""
-        self.board.getData(MultiWii.ATTITUDE)
         return self.board.attitude["angy"]
 
     def get_yaw(self):
         """Returns the yaw angle"""
-        self.board.getData(MultiWii.ATTITUDE)
         return self.board.attitude["heading"]
 
     def get_ax(self):
         """Returns the x acceleration"""
-        self.board.getData(MultiWii.RAW_IMU)
         return self.board.rawIMU["ax"]
     
     def get_ay(self):
         """Returns the y acceleration"""
-        self.board.getData(MultiWii.RAW_IMU)
         return self.board.rawIMU["ay"]
     
     def get_az(self):
         """Returns the z acceleration"""
-        self.board.getData(MultiWii.RAW_IMU)
         return self.board.rawIMU["az"]
     
-    def get_gx(self):
-        """Returns the x angular velocity"""
-        self.board.getData(MultiWii.RAW_IMU)
+    def get_droll(self):
+        """Returns the roll angular velocity"""
         return self.board.rawIMU["gx"]
     
-    def get_gy(self):
-        """Returns the y angular velocity"""
-        self.board.getData(MultiWii.RAW_IMU)
+    def get_dpitch(self):
+        """Returns the pitch angular velocity"""
         return self.board.rawIMU["gy"]
     
-    def get_gz(self):
-        """Returns the z angular velocity"""
-        self.board.getData(MultiWii.RAW_IMU)
+    def get_dyaw(self):
+        """Returns the yaw angular velocity"""
         return self.board.rawIMU["gz"]
 
     def exit(self):
