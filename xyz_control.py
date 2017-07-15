@@ -26,7 +26,7 @@ r.set('ry', 0.0)
 
 # x parameters
 # Proportion coefficients: how strongly the error should be corrected
-Kp_x  = 10.
+Kp_x  = 20.
 Kd_x  = 0.
 Ki_x  = 0.
 
@@ -37,7 +37,7 @@ d_error_x= 0
 
 # y parameters
 # Proportion coefficients: how strongly the error should be corrected
-Kp_y  = 10.
+Kp_y  = 20.
 Kd_y  = 0.
 Ki_y  = 0.
 
@@ -51,11 +51,11 @@ d_error_y= 0
 Ku_yaw = 0.2
 Tu_yaw = 0.4
 # Proportion coefficients: how strongly the error should be corrected
-Kp_yaw  = Ku_yaw * 0.45
-Kd_yaw  = 0.2*Kp_yaw * Tu_yaw * .125
+Kp_yaw  = 0.075
+Kd_yaw  = -0.0003
 Ki_yaw  = 0.
 
-out_yaw_limit = 0.
+out_yaw_limit = 1.
 
 error_yaw = 0
 d_error_yaw = 0
@@ -63,7 +63,7 @@ d_error_yaw = 0
 # roll parameters
 # Proportion coefficients: how strongly the error should be corrected
 Kp_roll  = 0.02*0.8
-Kd_roll  = -0.0001
+Kd_roll  = 0.0001
 Ki_roll  = 0.
 
 out_roll_limit = 1.0
@@ -78,7 +78,7 @@ Kp_pitch  = 0.02*.6
 Kd_pitch  = 0.0001
 Ki_pitch  = 0.
 
-out_pitch_limit = 0.0
+out_pitch_limit = 1.0
 
 error_pitch = 0
 d_error_pitch = 0
@@ -99,14 +99,16 @@ pitch0 = drone.get_pitch()
 yaw0 = drone.get_yaw()
 
 x_controller = PID(
-    Kp_x, Kd_x, Ki_x,
-    lambda : x0 + float(r.get('rx')), lambda : float(r.get('y')), lambda : 0,
-    lambda e : e, out_x_limit)
+    kp = Kp_x, kd = Kd_x, ki = Ki_x,
+    get_state = lambda : float(r.get('y')), get_dstate = lambda : 0,
+    get_ref = lambda : x0 + float(r.get('rx')),
+    out_limit = out_x_limit)
 
 y_controller = PID(
-    Kp_y, Kd_y, Ki_y,
-    lambda : y0 + float(r.get('ry')), lambda : float(r.get('z')), lambda : 0,
-    lambda e : e, out_y_limit)
+    kp = Kp_y, kd = Kd_y, ki = Ki_y,
+    get_state = lambda : float(r.get('z')), get_dstate = lambda : 0,
+    get_ref = lambda : x0 + float(r.get('ry')),
+    out_limit = out_y_limit)
 
 def compute_roll0():
     r0 = -y_controller.step()
@@ -118,7 +120,7 @@ def compute_pitch0():
 
 yaw_controller = PID(
     kp = Kp_yaw, kd = Kd_yaw, ki = Ki_yaw,
-    get_state = drone.get_yaw, get_dstate = lambda: -drone.get_dyaw(),
+    get_state = drone.get_yaw, get_dstate =drone.get_dyaw,
     get_ref = lambda:yaw0,
     center_error = center_error,
     out_limit=out_yaw_limit)

@@ -14,8 +14,11 @@ drone = DroneComm()
 Ku_yaw = 0.2
 Tu_yaw = 0.4
 # Proportion coefficients: how strongly the error should be corrected
-Kp_yaw  = Ku_yaw * 0.45
-Kd_yaw  = 0.2*Kp_yaw * Tu_yaw * .125
+# Kp_yaw  = Ku_yaw * 0.45
+# Kd_yaw  = 0.2*Kp_yaw * Tu_yaw * .125
+# Ki_yaw  = 0.
+Kp_yaw  = 0.075
+Kd_yaw  = -0.0003
 Ki_yaw  = 0.
 
 out_yaw_limit = 1.0
@@ -62,7 +65,7 @@ pitch0 = drone.get_pitch()
 
 yaw_controller = PID(
     kp = Kp_yaw, kd = Kd_yaw, ki = Ki_yaw,
-    get_state = drone.get_yaw, get_dstate = lambda: -drone.get_dyaw(),
+    get_state = drone.get_yaw, get_dstate = drone.get_dyaw,
     get_ref = lambda:yaw0,
     center_error = center_error,
     out_limit=out_yaw_limit)
