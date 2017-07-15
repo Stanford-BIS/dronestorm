@@ -1,4 +1,4 @@
-# Cleanflight / NAZE 2.0.3 Jun 20 2017 / 21:04:38 (1d18f94)
+# Cleanflight / NAZE 2.0.5 Jul  9 2017 / 14:34:06 (060a9e4)
 name -
 resource BEEPER 1 A12
 resource MOTOR 1 A08
@@ -219,8 +219,8 @@ mode_color 6 8 0
 mode_color 6 9 0
 mode_color 6 10 0
 mode_color 7 0 3
-aux 0 0 1 1800 2000
-aux 1 1 1 1000 2000
+aux 0 0 1 1400 2000
+aux 1 1 1 1400 1600
 aux 2 26 1 1800 2000
 aux 3 0 0 900 900
 aux 4 0 0 900 900
