@@ -12,8 +12,11 @@ __status__ = "Development"
 import serial, time, struct, subprocess, os
 
 class MultiWii(object):
-    """Multiwii Serial Protocol message ID"""
-    """ notice: just attitude, rc channels and raw imu, set raw rc are implemented at the moment """
+    """Multiwii Serial Protocol message ID
+
+    notice: just attitude, rc channels and raw imu, and set raw rc
+    are implemented at the moment
+    """
     IDENT = 100
     STATUS = 101
     RAW_IMU = 102
@@ -50,9 +53,7 @@ class MultiWii(object):
     DEBUG = 254
 
 
-    """Class initialization"""
     def __init__(self, serPort):
-        """Global variables of data"""
         self.PIDcoef = {
             'rp':0,'ri':0,'rd':0,
             'pp':0,'pi':0,'pd':0,
@@ -75,7 +76,6 @@ class MultiWii(object):
         self.temp = ();
         self.temp2 = ();
         self.elapsed = 0
-        self.PRINT = 1
 
         self.ser = serial.Serial()
         self.ser.port = serPort
@@ -83,50 +83,43 @@ class MultiWii(object):
         self.ser.bytesize = serial.EIGHTBITS
         self.ser.parity = serial.PARITY_NONE
         self.ser.stopbits = serial.STOPBITS_ONE
-        self.ser.timeout = 0
+        self.ser.timeout = None
         self.ser.xonxoff = False
         self.ser.rtscts = False
         self.ser.dsrdtr = False
         self.ser.writeTimeout = 2
-        """Time to wait until the board becomes operational"""
-        wakeup = 2
         try:
             self.ser.open()
-            for i in range(1,wakeup):
-                if self.PRINT:
-                    #print wakeup-i
-                    time.sleep(1)
-                else:
-                    time.sleep(1)
         except(Exception) as error:
-            print(
-                "\n\nError opening "+self.ser.port+
-                " port.\n"+str(error)+"\n\n")
+            print("\n\nError opening "+self.ser.port+
+                  " port.\n"+str(error)+"\n\n")
 
-    """Function for sending a command to the board"""
     def sendCMD(self, data_length, code, data):
+        """Send a command to the board"""
         checksum = 0
         total_data = ['$', 'M', '<', data_length, code] + data
-        for i in struct.pack('<2B%dH' % len(data), *total_data[3:len(total_data)]):
+        for i in struct.pack(
+                '<2B%dH' % len(data), *total_data[3:len(total_data)]):
             checksum = checksum ^ ord(i)
         total_data.append(checksum)
         try:
-            b = None
-            b = self.ser.write(struct.pack('<3c2B%dHB' % len(data), *total_data))
+            b = self.ser.write(
+                struct.pack('<3c2B%dHB' % len(data), *total_data))
         except(Exception) as error:
             pass
 
-    """Function for sending a command to the board and receive attitude"""
     def sendCMDreceiveATT(self, data_length, code, data):
+        """Send a command to the board and receive attitude"""
         checksum = 0
         total_data = ['$', 'M', '<', data_length, code] + data
-        for i in struct.pack('<2B%dH' % len(data), *total_data[3:len(total_data)]):
+        for i in struct.pack(
+                '<2B%dH' % len(data), *total_data[3:len(total_data)]):
             checksum = checksum ^ ord(i)
         total_data.append(checksum)
         try:
             start = time.time()
-            b = None
-            b = self.ser.write(struct.pack('<3c2B%dHB' % len(data), *total_data))
+            b = self.ser.write(
+                struct.pack('<3c2B%dHB' % len(data), *total_data))
             while True:
                 header = self.ser.read()
                 if header == '$':
@@ -150,18 +143,19 @@ class MultiWii(object):
             #print "("+str(error)+")\n\n"
             pass
 
-    """Function to arm / disarm """
     def arm(self):
+        """Arms the motors"""
         timer = 0
         start = time.time()
         while timer < 0.5:
             data = [1500,1500,2000,1000]
-            self.sendCMD(8,MultiWii.SET_RAW_RC,data)
+            self.sendCMD(8, MultiWii.SET_RAW_RC, data)
             time.sleep(0.05)
             timer = timer + (time.time() - start)
             start = time.time()
 
     def disarm(self):
+        """Disarms the motors"""
         timer = 0
         start = time.time()
         while timer < 0.5:
@@ -184,12 +178,8 @@ class MultiWii(object):
     def getData(self, cmd):
         try:
             start = time.time()
-            self.sendCMD(0,cmd,[])
-            while True:
-                header = self.ser.read()
-                if header == '$':
-                    header = header+self.ser.read(2)
-                    break
+            self.sendCMD(0, cmd, [])
+            header = self.ser.read(3)
             datalength = struct.unpack('<b', self.ser.read())[0]
             code = struct.unpack('<b', self.ser.read())
             data = self.ser.read(datalength)
@@ -262,14 +252,14 @@ class MultiWii(object):
             else:
                 return "No return error!"
         except(Exception) as error:
-            #print error
+            print(error)
             pass
 
-    """
-    Function to receive a data packet from the board.
-    Note: easier to use on threads
-    """
     def getDataInf(self, cmd):
+        """Receive a data packet from the board.
+
+        Note: easier to use on threads
+        """
         while True:
             try:
                 start = time.clock()
@@ -319,12 +309,16 @@ class MultiWii(object):
                 pass
 
     def closeSerial(self):
+        """Close the serial port and reset the stty settings"""
         self.ser.close()
         bashCommand = "stty sane < /dev/ttyUSB0"
         os.system(bashCommand)
 
-    """Function to ask for 2 fixed cmds, attitude and rc channels, and receive them. Note: is a bit slower than others"""
     def getData2cmd(self, cmd):
+        """Function to ask for 2 fixed cmds: attitude and rc channels
+        
+        Note: is a bit slower than others
+        """
         try:
             start = time.time()
             self.sendCMD(0,self.ATTITUDE,[])
