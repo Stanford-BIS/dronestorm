@@ -16,6 +16,8 @@ drone = DroneComm()
 try:
     while (True):
         # Fetching current pitch/roll values
+        drone.update_attitude()
+        drone.update_imu()
         roll = drone.get_roll()
         pitch = drone.get_pitch()
         yaw = drone.get_yaw()
