@@ -6,17 +6,11 @@ import numpy as np
 
 # Flight stabilization app using the DroneControl Library
 # Current roll and pitch values are acquired from the flight controller
-# then pulse width signals are determined to fix the error
+# then roll and pitch rates are set to correct the error
 
 drone = DroneComm()
 
-# Zigler Nichols estimated tuning parameters
-Ku_yaw = 0.2
-Tu_yaw = 0.4
-# Proportion coefficients: how strongly the error should be corrected
-# Kp_yaw  = Ku_yaw * 0.45
-# Kd_yaw  = 0.2*Kp_yaw * Tu_yaw * .125
-# Ki_yaw  = 0.
+# yaw parameters
 Kp_yaw  = 0.075
 Kd_yaw  = -0.0003
 Ki_yaw  = 0.
@@ -26,8 +20,7 @@ out_yaw_limit = 1.0
 error_yaw = 0
 d_error_yaw = 0
 
-#roll parameters
-# Proportion coefficients: how strongly the error should be corrected
+# roll parameters
 Kp_roll  = 0.02*0.8
 Kd_roll  = 0.0001
 Ki_roll  = 0.
@@ -37,8 +30,7 @@ out_roll_limit = 1.0
 error_roll = 0
 d_error_roll = 0
 
-#pitch parameters
-# Proportion coefficients: how strongly the error should be corrected
+# pitch parameters
 Kp_pitch  = 0.02*0.6
 Kd_pitch  = 0.0001
 Ki_pitch  = 0.

@@ -91,8 +91,9 @@ class MultiWii(object):
         try:
             self.ser.open()
         except(Exception) as error:
-            print("\n\nError opening "+self.ser.port+
-                  " port.\n"+str(error)+"\n\n")
+            print("\n\nError opening port "+self.ser.port +":")
+            print(str(error)+"\n\n")
+            raise(error)
 
     def sendCMD(self, data_length, code, data):
         """Send a command to the board"""
@@ -106,7 +107,9 @@ class MultiWii(object):
             b = self.ser.write(
                 struct.pack('<3c2B%dHB' % len(data), *total_data))
         except(Exception) as error:
-            pass
+            print("\n\nError sending command on port "+self.ser.port)
+            print(str(error)+"\n\n")
+            raise(error)
 
     def sendCMDreceiveATT(self, data_length, code, data):
         """Send a command to the board and receive attitude"""
@@ -139,9 +142,9 @@ class MultiWii(object):
             self.attitude['timestamp']="%0.2f" % (time.time(),)
             return self.attitude
         except(Exception) as error:
-            #print "\n\nError in sendCMDreceiveATT."
-            #print "("+str(error)+")\n\n"
-            pass
+            print("\n\nError in sendCMDreceiveATT on port "+self.ser.port)
+            print(str(error)+"\n\n")
+            raise(error)
 
     def arm(self):
         """Arms the motors"""
@@ -252,8 +255,9 @@ class MultiWii(object):
             else:
                 return "No return error!"
         except(Exception) as error:
-            print(error)
-            pass
+            print("\n\nError in getData on port "+self.ser.port)
+            print(str(error)+"\n\n")
+            raise(error)
 
     def getDataInf(self, cmd):
         """Receive a data packet from the board.
@@ -306,7 +310,9 @@ class MultiWii(object):
                     self.motor['elapsed']="%0.3f" % (elapsed,)
                     self.motor['timestamp']="%0.2f" % (time.time(),)
             except(Exception) as error:
-                pass
+                print("\n\nError in getDataInf on port "+self.ser.port)
+                print(str(error)+"\n\n")
+                raise(error)
 
     def closeSerial(self):
         """Close the serial port and reset the stty settings"""
@@ -362,4 +368,6 @@ class MultiWii(object):
             else:
                 return "No return error!"
         except(Exception) as error:
-            print(error)
+            print("\n\nError in getData2Cmd on port "+self.ser.port)
+            print(str(error)+"\n\n")
+            raise(error)
