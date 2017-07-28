@@ -27,8 +27,8 @@ error_yaw = 0
 d_error_yaw = 0
 
 # roll parameters
-Kp_roll  = 0.02*0.8
-Kd_roll  = 0.0001
+Kp_roll  = 0.04
+Kd_roll  = 0.000001
 Ki_roll  = 0.
 
 out_roll_limit = 1.0
@@ -37,8 +37,8 @@ error_roll = 0
 d_error_roll = 0
 
 # pitch parameters
-Kp_pitch  = 0.02*0.6
-Kd_pitch  = 0.0001
+Kp_pitch  = 0.04
+Kd_pitch  = 0.000001
 Ki_pitch  = 0.
 
 out_pitch_limit = 1.0
