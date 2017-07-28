@@ -178,7 +178,8 @@ class DroneComm(object):
             rate (scaled by max rate)
         """
         rate, valid = self.validate_rate(rate)
-        width = self.MID_WIDTH + rate*self.MAX_DELTA_PWIDTH
+        width = (
+            self.MID_WIDTH + self.roll_pwm_trim + rate*self.MAX_DELTA_PWIDTH)
         self.set_pwidth(self.ROLL_CHANNEL, width)
         if not valid:
             print("WARNING: Requested roll rate out of range!")
@@ -192,7 +193,8 @@ class DroneComm(object):
             rate (scaled by max rate)
         """
         rate, valid = self.validate_rate(rate)
-        width = self.MID_WIDTH + rate*self.MAX_DELTA_PWIDTH
+        width = (
+            self.MID_WIDTH + self.pitch_pwm_trim + rate*self.MAX_DELTA_PWIDTH)
         self.set_pwidth(self.PITCH_CHANNEL, width)
         if not valid:
             print("WARNING: Requested pitch rate out of range!")
@@ -206,7 +208,8 @@ class DroneComm(object):
             rate (scaled by max rate)
         """
         rate, valid = self.validate_rate(rate)
-        width = self.MID_WIDTH + rate*self.MAX_DELTA_PWIDTH
+        width = (
+            self.MID_WIDTH + self.yaw_pwm_trim + rate*self.MAX_DELTA_PWIDTH)
         self.set_pwidth(self.YAW_CHANNEL, width)
         if not valid:
             print("WARNING: Requested yaw rate out of range!")
