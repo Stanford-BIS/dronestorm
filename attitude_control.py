@@ -8,17 +8,17 @@ import numpy as np
 # Current roll and pitch values are acquired from the flight controller
 # then roll and pitch rates are set to correct the error
 
-roll_pwm_trim = 0
-pitch_pwm_trim = 0
-yaw_pwm_trim = 0
+roll_pwm_trim = -4
+pitch_pwm_trim = 5
+yaw_pwm_trim = 6 
 drone = DroneComm(
     roll_pwm_trim = roll_pwm_trim,
     pitch_pwm_trim = pitch_pwm_trim,
     yaw_pwm_trim = yaw_pwm_trim)
 
 # roll parameters
-Kp_roll  = 0.02*0.8
-Kd_roll  = 0.0001
+Kp_roll  = 0.04
+Kd_roll  = 0.000001
 Ki_roll  = 0.
 
 out_roll_limit = 1.0
@@ -26,10 +26,9 @@ out_roll_limit = 1.0
 error_roll = 0
 d_error_roll = 0
 
-
 # pitch parameters
-Kp_pitch  = 0.02*0.6
-Kd_pitch  = 0.0001
+Kp_pitch  = 0.04
+Kd_pitch  = 0.000001
 Ki_pitch  = 0.
 
 out_pitch_limit = 1.0
