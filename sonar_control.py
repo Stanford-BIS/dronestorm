@@ -1,12 +1,12 @@
 import RPi.GPIO as GPIO
-from RPIO import PWM
-import time
+import time, sys
+import numpy as np
+
+TRIG_ID = 23
+ECHO_ID = 24
 
 def initSonar():
     GPIO.setmode(GPIO.BCM)
-
-    TRIG_ID = 23
-    ECHO_ID = 24
 
     GPIO.setup(TRIG_ID, GPIO.OUT)
     GPIO.setup(ECHO_ID, GPIO.IN)
@@ -30,12 +30,13 @@ def measureDistance():
 
     return distance
 
+initSonar()
 
 try:
     while (True):
         dist = measureDistance()
         print "Distance:",dist,"cm"
-        time.sleep(0.4)
+        time.sleep(0.2)
 
 except (KeyboardInterrupt, SystemExit):
     GPIO.cleanup()
