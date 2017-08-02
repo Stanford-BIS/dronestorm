@@ -48,6 +48,7 @@ class DroneComm(object):
     ROLL_CHANNEL  = 3
     PITCH_CHANNEL = 2
     YAW_CHANNEL   = 1
+    THR_CHANNEL   = 0
 
     # Calibration factor to compensate for mismatch between
     # requested pwm period and pwm freq implemented by Adafruit PWM generator
@@ -85,7 +86,7 @@ class DroneComm(object):
 
     def reset_channels(self):
         """Reset channels 0-6 on the feather board
-        
+
         Applies trim to roll/pitch/yaw channels
         """
         for i in range(6):
@@ -99,7 +100,7 @@ class DroneComm(object):
 
     def set_pwidth(self, channel, width):
         """Set a positive Pulse Width on a channel
-        
+
         Parameters
         ----------
         channel: int
@@ -113,7 +114,7 @@ class DroneComm(object):
 
     def set_roll_pwidth(self, width):
         """Apply trim and set the pwm Roll signal's positive pulse width
-        
+
         Parameters
         ----------
         width: float
@@ -128,7 +129,7 @@ class DroneComm(object):
 
     def set_pitch_pwidth(self, width):
         """Apply trim and set the pwm Pitch signal's positive pulse width
-        
+
         Parameters
         ----------
         width: float
@@ -143,7 +144,7 @@ class DroneComm(object):
 
     def set_yaw_pwidth(self, width):
         """Apply trim and set the pwm Yaw signal's positive pulse width
-        
+
         Parameters
         ----------
         width: float
@@ -156,9 +157,24 @@ class DroneComm(object):
         if not valid:
             print("WARNING: Requested yaw pwidth out of range!")
 
+    def set_thr_pwidth(self, width):
+        """Apply trim and set the pwm Throttle signal's positive pulse width
+
+        Parameters
+        ----------
+        width: float
+            positive pulse width (seconds)
+        """
+        # apply trim offset
+        width += self.yaw_pwm_trim
+        width, valid = self.validate_pwidth(width)
+        self.set_pwidth(self.THR_CHANNEL, width)
+        if not valid:
+            print("WARNING: Requested thr pwidth out of range!")
+
     def validate_pwidth(self, width):
         """Validate the pwm signal's positive pulse width
-        
+
         Checks that the width is within the accepted range
         If not, the MAX_WIDTH or MIN_WIDTH is returned
         """
@@ -171,7 +187,7 @@ class DroneComm(object):
 
     def set_roll_rate(self, rate):
         """Set the Roll rate
-        
+
         Parameters
         ----------
         width: float [-1, 1]
@@ -186,7 +202,7 @@ class DroneComm(object):
 
     def set_pitch_rate(self, rate):
         """Set the Pitch rate
-        
+
         Parameters
         ----------
         width: float [-1, 1]
@@ -201,7 +217,7 @@ class DroneComm(object):
 
     def set_yaw_rate(self, rate):
         """Set the Yaw rate
-        
+
         Parameters
         ----------
         width: float [-1, 1]
@@ -216,7 +232,7 @@ class DroneComm(object):
 
     def validate_rate(self, rate):
         """Validate the requested channel rate is valid
-        
+
         Checks that the width is within [-1, 1]
         Clips to range limit
         """
@@ -254,23 +270,23 @@ class DroneComm(object):
     def get_ax(self):
         """Returns the x acceleration"""
         return self.board.rawIMU["ax"]
-    
+
     def get_ay(self):
         """Returns the y acceleration"""
         return self.board.rawIMU["ay"]
-    
+
     def get_az(self):
         """Returns the z acceleration"""
         return self.board.rawIMU["az"]
-    
+
     def get_droll(self):
         """Returns the roll angular velocity"""
         return self.board.rawIMU["gx"]
-    
+
     def get_dpitch(self):
         """Returns the pitch angular velocity"""
         return self.board.rawIMU["gy"]
-    
+
     def get_dyaw(self):
         """Returns the yaw angular velocity"""
         return self.board.rawIMU["gz"]
