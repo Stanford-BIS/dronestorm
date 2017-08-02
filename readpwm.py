@@ -1,6 +1,7 @@
 import time, sys
 import numpy as np
 import RPi.GPIO as GPIO
+from DroneControl import comm
 
 FREQ = 45.45
 T = 0.022
