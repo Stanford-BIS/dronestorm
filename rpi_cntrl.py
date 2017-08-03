@@ -10,10 +10,9 @@ drone = DroneComm()
 MID_WIDTH = 0.0015
 
 
-
 try:
     while(True):
-
+        #drone.update_attitude()
         aux1 = float(r.get('aux1'))
 
         if(aux1 < MID_WIDTH):
@@ -22,19 +21,21 @@ try:
             yaw = float(r.get('yaw'))
             pitch = float(r.get('pitch'))
             roll = float(r.get('roll'))
+            thr = float(r.get('thr'))
 
             drone.set_pitch_pwidth(pitch)
             drone.set_roll_pwidth(roll)
             drone.set_yaw_pwidth(yaw)
+            drone.set_thr_pwidth(thr)
 
-            curr_roll = drone.get_roll()
-            curr_pitch = drone.get_pitch()
-            curr_yaw = drone.get_yaw()
-
-            sys.stdout.write(
-                "roll:%6.5f pitch:%5.5f yaw:%5.5f\r" %
-                (roll, pitch, yaw))
-            sys.stdout.flush()
+            # curr_roll = drone.get_roll()
+            # curr_pitch = drone.get_pitch()
+            # curr_yaw = drone.get_yaw()
+            #
+            # sys.stdout.write(
+            #     "roll:%6.5f pitch:%5.5f yaw:%5.5f\r" %
+            #     (curr_roll, curr_pitch, curr_yaw))
+            # sys.stdout.flush()
 
         # else:
         #     # Autonomy

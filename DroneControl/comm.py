@@ -79,10 +79,10 @@ class DroneComm(object):
         else:
             self.pwm = None
 
-        if port is None:
-            self.board = None
-        else:
-            self.board = MultiWii(port)
+        # if port is None:
+        #     self.board = None
+        # else:
+        #     self.board = MultiWii(port)
 
     def reset_channels(self):
         """Reset channels 0-6 on the feather board
@@ -166,8 +166,11 @@ class DroneComm(object):
             positive pulse width (seconds)
         """
         # apply trim offset
-        width += self.yaw_pwm_trim
-        width, valid = self.validate_pwidth(width)
+        valid = True
+        if(width > self.MAX_WIDTH):
+            valid = False
+            width = self.MAX_WIDTH
+
         self.set_pwidth(self.THR_CHANNEL, width)
         if not valid:
             print("WARNING: Requested thr pwidth out of range!")
@@ -297,8 +300,8 @@ class DroneComm(object):
         """
         if self.pwm is not None:
             self.reset_channels()
-        if self.board is not None:
-            self.board.closeSerial()
+        # if self.board is not None:
+        #     self.board.closeSerial()
 
     def control_example(self):
         """
@@ -308,15 +311,15 @@ class DroneComm(object):
         self.reset_channels()
         time.sleep(1)
 
-        self.set_yaw(self.MAX_WIDTH)
-        self.set_pitch(self.MAX_WIDTH)
-        self.set_roll(self.MAX_WIDTH)
+        self.set_yaw_pwidth(self.MAX_WIDTH)
+        self.set_pitch_pwidth(self.MAX_WIDTH)
+        self.set_roll_pwidth(self.MAX_WIDTH)
 
         time.sleep(2)
 
-        self.set_yaw(self.MIN_WIDTH)
-        self.set_pitch(self.MIN_WIDTH)
-        self.set_roll(self.MIN_WIDTH)
+        self.set_yaw_pwidth(self.MIN_WIDTH)
+        self.set_pitch_pwidth(self.MIN_WIDTH)
+        self.set_roll_pwidth(self.MIN_WIDTH)
 
         time.sleep(2)
         self.reset_channels()

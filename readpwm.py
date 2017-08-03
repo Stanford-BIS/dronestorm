@@ -15,27 +15,32 @@ r = redis.StrictRedis(host=host)
 
 def measurePWM(channel):
     GPIO.setup(channel, GPIO.IN)
-
-    N = 1
-
-    dt = np.zeros(N)
-    dt_idx = 0
     trise = time.time()
     tfall = time.time()
     prev_state = GPIO.input(channel)
 
-    while(dt_idx<N):
+    N = 0
+    tot = 0
+
+    while(True):
         curr_state = GPIO.input(channel)
         if curr_state != prev_state and prev_state == GPIO.HIGH:
             tfall = time.time()
             prev_state = curr_state
-            dt[dt_idx] = tfall-trise
-            dt_idx += 1
+            N += 1
+
+            if N == 1 :
+                tot += tfall - trise
+            elif N == 2:
+                tot += tfall - trise
+                N = 0
+                temp = tot
+                tot = 0
+                return temp / 2
+
         elif curr_state != prev_state and prev_state == GPIO.LOW:
             trise = time.time()
             prev_state = curr_state
-
-    return np.mean(dt)
 
 try:
     while(True):
