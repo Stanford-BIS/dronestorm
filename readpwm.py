@@ -1,6 +1,7 @@
-import time, sys, redis
+import time, sys, redis, pigpio
 import numpy as np
 import RPi.GPIO as GPIO
+from DroneControl import Reader
 
 YAW_CHN = 27
 ROLL_CHN = 22
@@ -8,47 +9,27 @@ PITCH_CHN = 17
 AUX1_CHN = 26
 THR_CHN = 13
 
-GPIO.setmode(GPIO.BCM)
-
 host = '127.0.0.1'
 r = redis.StrictRedis(host=host)
 
-def measurePWM(channel):
-    GPIO.setup(channel, GPIO.IN)
-    trise = time.time()
-    tfall = time.time()
-    prev_state = GPIO.input(channel)
+pi = pigpio.pi()
+ro = Reader(pi, ROLL_CHN)
+p = Reader(pi, PITCH_CHN)
+y = Reader(pi, YAW_CHN)
+th = Reader(pi, THR_CHN)
+aux = Reader(pi, AUX1_CHN)
+time.sleep(0.1)
 
-    N = 0
-    tot = 0
-
-    while(True):
-        curr_state = GPIO.input(channel)
-        if curr_state != prev_state and prev_state == GPIO.HIGH:
-            tfall = time.time()
-            prev_state = curr_state
-            N += 1
-
-            if N == 1 :
-                tot += tfall - trise
-            elif N == 2:
-                tot += tfall - trise
-                N = 0
-                temp = tot
-                tot = 0
-                return temp / 2
-
-        elif curr_state != prev_state and prev_state == GPIO.LOW:
-            trise = time.time()
-            prev_state = curr_state
+def measurePWM(pigpio_pulse):
+    return pigpio_pulse.pulse_width()
 
 try:
     while(True):
-        yaw = measurePWM(YAW_CHN)
-        pitch = measurePWM(PITCH_CHN)
-        roll = measurePWM(ROLL_CHN)
-        thr = measurePWM(THR_CHN)
-        aux1 = measurePWM(AUX1_CHN)
+        yaw = measurePWM(y)
+        pitch = measurePWM(p)
+        roll = measurePWM(ro)
+        thr = measurePWM(th)
+        aux1 = measurePWM(aux)
 
         r.set('roll', roll)
         r.set('pitch', pitch)
@@ -61,4 +42,10 @@ try:
             (roll, pitch, yaw, thr, aux1))
         sys.stdout.flush()
 except (KeyboardInterrupt, SystemExit):
-    GPIO.cleanup()
+    # Graceful Exit
+    ro.cancel()
+    p.cancel()
+    y.cancel()
+    aux.cancel()
+    th.cancel()
+    pi.stop()
