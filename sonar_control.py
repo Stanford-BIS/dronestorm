@@ -1,11 +1,12 @@
 import RPi.GPIO as GPIO
 import time, sys
 import numpy as np
+from smbus import SMBus
 
 TRIG_ID = 23
 ECHO_ID = 24
 
-def initSonar():
+def init_HCSRO4_Sonar():
     GPIO.setmode(GPIO.BCM)
 
     GPIO.setup(TRIG_ID, GPIO.OUT)
@@ -14,7 +15,7 @@ def initSonar():
     GPIO.output(TRIG_ID, False)
     time.sleep(2)
 
-def measureDistance():
+def measureDistance_HCSRO4():
     GPIO.output(TRIG_ID, True)
     time.sleep(0.00001)
     GPIO.output(TRIG_ID, False)
@@ -30,13 +31,24 @@ def measureDistance():
 
     return distance
 
-initSonar()
+# init_HCSRO4_Sonar()
+#
+# try:
+#     while (True):
+#         dist = measureDistance_HCSRO4()
+#         print "Distance:",dist,"cm"
+#         time.sleep(0.2)
+#
+# except (KeyboardInterrupt, SystemExit):
+#     GPIO.cleanup()
 
 try:
-    while (True):
-        dist = measureDistance()
-        print "Distance:",dist,"cm"
-        time.sleep(0.2)
-
-except (KeyboardInterrupt, SystemExit):
-    GPIO.cleanup()
+    while True:
+        i2cbus = SMBus(1)
+        i2cbus.write_byte(0x70, 0x51)
+        time.sleep(0.12)
+        val = i2cbus.read_word_data(0x70, 0xe1)
+        print (val >> 8) & 0xff * 256 + (val & 0xff)
+        # print (val >> 8) & 0xff | (val & 0xff), 'cm'
+except IOError, err:
+  print err
