@@ -21,7 +21,7 @@ float k = 255. / ((float) pw_max_us); // convert between measured pw and led dut
 void setup() {                
   pinMode(ledpin, OUTPUT);
   pinMode(pwmpin, INPUT_PULLUP); 
-  attachInterrupt(0, read_pwm, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(pwmpin), read_pwm, CHANGE);
   Serial.begin(9600);
 }
 
