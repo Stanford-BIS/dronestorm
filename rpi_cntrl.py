@@ -9,7 +9,6 @@ drone = DroneComm()
 
 MID_WIDTH = 0.0015
 
-
 try:
     while(True):
         aux1 = float(r.get('aux1'))
@@ -38,7 +37,6 @@ try:
             drone.set_roll_pwidth(roll)
             drone.set_yaw_pwidth(yaw)
             drone.set_thr_pwidth(thr)
-
 
 except (KeyboardInterrupt, SystemExit):
     # Graceful Exit
