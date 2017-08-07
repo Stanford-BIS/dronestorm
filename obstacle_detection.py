@@ -1,5 +1,5 @@
 import RPi.GPIO as GPIO
-import time, sys, redis
+import time, sys, redis, pigpio
 from DroneControl import DroneComm
 from DroneControl import Reader
 
@@ -63,6 +63,9 @@ def measureDistance_HCSRO4(TRIG_ID, ECHO_ID):
 
     return distance
 
+def measurePWM(pigpio_pulse):
+    return pigpio_pulse.pulse_width()
+
 init_HCSRO4_Sonar(FRONT_TRIG_ID, FRONT_ECHO_ID)
 init_HCSRO4_Sonar(BACK_TRIG_ID, BACK_ECHO_ID)
 
@@ -82,13 +85,13 @@ try:
         aux1 = measurePWM(aux)
 
         # manual control
-        r.set('m_roll', roll)
-        r.set('m_pitch', pitch)
-        r.set('m_yaw', yaw)
-        r.set('m_thr', thr)
-        r.set('aux1', aux1)
+        r.set('a_roll', roll)
+        r.set('a_pitch', pitch)
+        r.set('a_yaw', yaw)
+        r.set('a_thr', thr)
+        r.set('a_aux1', aux1)
 
-        if (front_dist <= desired_distance) and (back_dist <= desired_distance) {
+        if (front_dist <= desired_distance) and (back_dist <= desired_distance):
             drone.update_attitude()
 
             curr_roll = drone.get_roll()
@@ -108,24 +111,31 @@ try:
             r.set('a_aux1', aux1)
 
 
-        } else if (front_dist <= desired_distance) {
+        elif (front_dist <= desired_distance):
             output_pwidth = K_front * front_dist + 0.0011
 
             # set corrective rate
             r.set('a_pitch', output_pwidth)
 
-        } else if (back_dist <= desired_distance) {
+        elif (back_dist <= desired_distance):
             output_pwidth = K_back * front_dist + 0.0011
 
             # set corrective rate
             r.set('a_pitch', output_pwidth)
 
-        }
-
+        acyaw = float(r.get('a_yaw'))
+        acpitch = float(r.get('a_pitch'))
+        acroll = float(r.get('a_roll'))
+        acthr = float(r.get('a_thr'))
+        acaux1 = float(r.get('a_aux1'))
 
         sys.stdout.write(
             "Front Distance:%6.2f Back Distance:%5.2f\r" %
             (front_dist, back_dist))
+
+        sys.stdout.write(
+            "roll:%.5f pitch:%.5f yaw:%.5f thr:%.5f aux1:%.5f\r"%
+            (acroll, acpitch, acyaw, acthr, acaux1))
 
         time.sleep(0.1)
         sys.stdout.flush()
