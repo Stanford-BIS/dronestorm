@@ -3,19 +3,24 @@ import time, sys
 import numpy as np
 from smbus import SMBus
 
-TRIG_ID = 12
-ECHO_ID = 16
+FRONT_TRIG_ID = 12
+FRONT_ECHO_ID = 16
 
-def init_HCSRO4_Sonar():
+BACK_TRIG_ID = 23
+BACK_ECHO_ID = 24
+
+def init_HCSRO4_Sonar(TRIG_ID, ECHO_ID):
     GPIO.setmode(GPIO.BCM)
 
     GPIO.setup(TRIG_ID, GPIO.OUT)
     GPIO.setup(ECHO_ID, GPIO.IN)
 
     GPIO.output(TRIG_ID, False)
-    time.sleep(2)
 
-def measureDistance_HCSRO4():
+    print("Init Sonar...")
+    time.sleep(1)
+
+def measureDistance_HCSRO4(TRIG_ID, ECHO_ID):
     GPIO.output(TRIG_ID, True)
     time.sleep(0.00001)
     GPIO.output(TRIG_ID, False)
@@ -31,24 +36,20 @@ def measureDistance_HCSRO4():
 
     return distance
 
-init_HCSRO4_Sonar()
+init_HCSRO4_Sonar(FRONT_TRIG_ID, FRONT_ECHO_ID)
+init_HCSRO4_Sonar(BACK_TRIG_ID, BACK_ECHO_ID)
 
 try:
     while (True):
-        dist = measureDistance_HCSRO4()
-        print "Distance:",dist,"cm"
-        time.sleep(0.2)
+        front_dist = measureDistance_HCSRO4(FRONT_TRIG_ID, FRONT_ECHO_ID)
+        back_dist = measureDistance_HCSRO4(BACK_TRIG_ID, BACK_ECHO_ID)
+
+        sys.stdout.write(
+            "Front Distance:%6.2f Back Distance:%5.2f\r" %
+            (front_dist, back_dist))
+
+        time.sleep(0.5)
+        sys.stdout.flush()
 
 except (KeyboardInterrupt, SystemExit):
     GPIO.cleanup()
-
-# try:
-#     while True:
-#         i2cbus = SMBus(1)
-#         i2cbus.write_byte(0x70, 0x51)
-#         time.sleep(0.12)
-#         val = i2cbus.read_word_data(0x70, 0xe1)
-#         print (val >> 8) & 0xff * 256 + (val & 0xff)
-#         # print (val >> 8) & 0xff | (val & 0xff), 'cm'
-# except IOError, err:
-#   print err

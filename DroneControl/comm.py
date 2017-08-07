@@ -79,10 +79,10 @@ class DroneComm(object):
         else:
             self.pwm = None
 
-        # if port is None:
-        #     self.board = None
-        # else:
-        #     self.board = MultiWii(port)
+        if port is None:
+            self.board = None
+        else:
+            self.board = MultiWii(port)
 
     def reset_channels(self):
         """Reset channels 0-6 on the feather board
@@ -300,8 +300,8 @@ class DroneComm(object):
         """
         if self.pwm is not None:
             self.reset_channels()
-        # if self.board is not None:
-        #     self.board.closeSerial()
+        if self.board is not None:
+            self.board.closeSerial()
 
     def control_example(self):
         """
