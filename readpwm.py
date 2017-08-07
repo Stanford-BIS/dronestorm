@@ -31,10 +31,10 @@ try:
         thr = measurePWM(th)
         aux1 = measurePWM(aux)
 
-        r.set('roll', roll)
-        r.set('pitch', pitch)
-        r.set('yaw', yaw)
-        r.set('thr', thr)
+        r.set('m_roll', roll)
+        r.set('m_pitch', pitch)
+        r.set('m_yaw', yaw)
+        r.set('m_thr', thr)
         r.set('aux1', aux1)
 
         sys.stdout.write(

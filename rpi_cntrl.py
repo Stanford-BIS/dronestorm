@@ -18,10 +18,10 @@ try:
         if(aux1 < MID_WIDTH):
             # Manual control
 
-            yaw = float(r.get('yaw'))
-            pitch = float(r.get('pitch'))
-            roll = float(r.get('roll'))
-            thr = float(r.get('thr'))
+            yaw = float(r.get('m_yaw'))
+            pitch = float(r.get('m_pitch'))
+            roll = float(r.get('m_roll'))
+            thr = float(r.get('m_thr'))
 
             drone.set_pitch_pwidth(pitch)
             drone.set_roll_pwidth(roll)
@@ -37,20 +37,22 @@ try:
                 (curr_roll, curr_pitch, curr_yaw))
             sys.stdout.flush()
 
-        # else:
-        #     # Autonomy
-        #     yaw = float(r.get('yaw'))
-        #     pitch = float(r.get('pitch'))
-        #     roll = float(r.get('roll'))
-        #
-        #     drone.set_pitch_pwidth(pitch)
-        #     drone.set_roll_pwidth(roll)
-        #     drone.set_yaw_pwidth(yaw)
-        #
-        #     sys.stdout.write(
-        #         "roll:%.5f pitch:%.5f yaw:%.5f\r"%
-        #         (drone.get_roll(), drone.get_pitch(), drone.get_yaw()))
-        #     sys.stdout.flush()
+        else:
+            # Autonomy
+            yaw = float(r.get('a_yaw'))
+            pitch = float(r.get('a_pitch'))
+            roll = float(r.get('a_roll'))
+            thr = float(r.get('a_thr'))
+
+            drone.set_pitch_pwidth(pitch)
+            drone.set_roll_pwidth(roll)
+            drone.set_yaw_pwidth(yaw)
+            drone.set_thr_pwidth(thr)
+
+            sys.stdout.write(
+                "roll:%.5f pitch:%.5f yaw:%.5f\r"%
+                (drone.get_roll(), drone.get_pitch(), drone.get_yaw()))
+            sys.stdout.flush()
 
 except (KeyboardInterrupt, SystemExit):
     # Graceful Exit
