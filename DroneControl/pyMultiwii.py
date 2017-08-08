@@ -5,8 +5,6 @@ __copyright__ = "Copyright 2017 Altax.net"
 
 __license__ = "GPL"
 __version__ = "1.6"
-__maintainer__ = "Aldo Vargas"
-__email__ = "alduxvm@gmail.com"
 __status__ = "Development"
 
 import serial, time, struct, subprocess, os
@@ -58,23 +56,17 @@ class MultiWii(object):
             'rp':0,'ri':0,'rd':0,
             'pp':0,'pi':0,'pd':0,
             'yp':0,'yi':0,'yd':0}
-        self.rcChannels = {
-            'roll':0,'pitch':0,'yaw':0,'throttle':0,'elapsed':0,'timestamp':0}
+        self.rcChannels = {'roll':0,'pitch':0,'yaw':0,'throttle':0}
         self.rawIMU = {
             'ax':0,'ay':0,'az':0,
             'gx':0,'gy':0,'gz':0,
-            'mx':0,'my':0,'mz':0,
-            'elapsed':0,'timestamp':0}
-        self.motor = {'m1':0,'m2':0,'m3':0,'m4':0,'elapsed':0,'timestamp':0}
-        self.attitude = {
-            'angx':0,'angy':0,'heading':0,'elapsed':0,'timestamp':0}
-        self.altitude = {'estalt':0,'vario':0,'elapsed':0,'timestamp':0}
+            'mx':0,'my':0,'mz':0}
+        self.motor = {'m1':0,'m2':0,'m3':0,'m4':0}
+        self.attitude = {'angx':0,'angy':0,'heading':0}
+        self.altitude = {'estalt':0,'vario':0}
         self.message = {
             'angx':0,'angy':0,'heading':0,
-            'roll':0,'pitch':0,'yaw':0,'throttle':0,
-            'elapsed':0,'timestamp':0}
-        self.temp = ();
-        self.temp2 = ();
+            'roll':0,'pitch':0,'yaw':0,'throttle':0}
         self.elapsed = 0
 
         self.ser = serial.Serial()
@@ -149,36 +141,28 @@ class MultiWii(object):
     def getData(self, cmd):
         """Function to receive a data packet from the board"""
         try:
-            start = time.time()
             self.sendCMD(0, cmd, [])
             header = self.ser.read(3)
             datalength = struct.unpack('<b', self.ser.read())[0]
             code = struct.unpack('<b', self.ser.read())
             data = self.ser.read(datalength)
-            temp = struct.unpack('<'+'h'*(datalength//2),data)
+            temp = struct.unpack('<'+'h'*(datalength//2), data)
             self.ser.flushInput()
             self.ser.flushOutput()
-            elapsed = time.time() - start
             if cmd == MultiWii.ATTITUDE:
                 self.attitude['angx']=float(temp[0]/10.0)
                 self.attitude['angy']=float(temp[1]/10.0)
                 self.attitude['heading']=float(temp[2])
-                self.attitude['elapsed']=round(elapsed,3)
-                self.attitude['timestamp']="%0.2f" % (time.time(),)
                 return self.attitude
             elif cmd == MultiWii.ALTITUDE:
                 self.altitude['estalt']=float(temp[0])
                 self.altitude['vario']=float(temp[1])
-                self.attitude['elapsed']=round(elapsed,3)
-                self.attitude['timestamp']="%0.2f" % (time.time(),)
                 return self.rcChannels
             elif cmd == MultiWii.RC:
                 self.rcChannels['roll']=temp[0]
                 self.rcChannels['pitch']=temp[1]
                 self.rcChannels['yaw']=temp[2]
                 self.rcChannels['throttle']=temp[3]
-                self.rcChannels['elapsed']=round(elapsed,3)
-                self.rcChannels['timestamp']="%0.2f" % (time.time(),)
                 return self.rcChannels
             elif cmd == MultiWii.RAW_IMU:
                 self.rawIMU['ax']=float(temp[0])
@@ -190,16 +174,12 @@ class MultiWii(object):
                 self.rawIMU['mx']=float(temp[6])
                 self.rawIMU['my']=float(temp[7])
                 self.rawIMU['mz']=float(temp[8])
-                self.rawIMU['elapsed']=round(elapsed,3)
-                self.rawIMU['timestamp']="%0.2f" % (time.time(),)
                 return self.rawIMU
             elif cmd == MultiWii.MOTOR:
                 self.motor['m1']=float(temp[0])
                 self.motor['m2']=float(temp[1])
                 self.motor['m3']=float(temp[2])
                 self.motor['m4']=float(temp[3])
-                self.motor['elapsed']="%0.3f" % (elapsed,)
-                self.motor['timestamp']="%0.2f" % (time.time(),)
                 return self.motor
             elif cmd == MultiWii.PID:
                 dataPID=[]
@@ -235,7 +215,6 @@ class MultiWii(object):
         """
         while True:
             try:
-                start = time.clock()
                 self.sendCMD(0,cmd,[])
                 while True:
                     header = self.ser.read()
@@ -246,22 +225,17 @@ class MultiWii(object):
                 code = struct.unpack('<b', self.ser.read())
                 data = self.ser.read(datalength)
                 temp = struct.unpack('<'+'h'*(datalength//2),data)
-                elapsed = time.clock() - start
                 self.ser.flushInput()
                 self.ser.flushOutput()
                 if cmd == MultiWii.ATTITUDE:
                     self.attitude['angx']=float(temp[0]/10.0)
                     self.attitude['angy']=float(temp[1]/10.0)
                     self.attitude['heading']=float(temp[2])
-                    self.attitude['elapsed']="%0.3f" % (elapsed,)
-                    self.attitude['timestamp']="%0.2f" % (time.time(),)
                 elif cmd == MultiWii.RC:
                     self.rcChannels['roll']=temp[0]
                     self.rcChannels['pitch']=temp[1]
                     self.rcChannels['yaw']=temp[2]
                     self.rcChannels['throttle']=temp[3]
-                    self.rcChannels['elapsed']="%0.3f" % (elapsed,)
-                    self.rcChannels['timestamp']="%0.2f" % (time.time(),)
                 elif cmd == MultiWii.RAW_IMU:
                     self.rawIMU['ax']=float(temp[0])
                     self.rawIMU['ay']=float(temp[1])
@@ -269,15 +243,11 @@ class MultiWii(object):
                     self.rawIMU['gx']=float(temp[3])
                     self.rawIMU['gy']=float(temp[4])
                     self.rawIMU['gz']=float(temp[5])
-                    self.rawIMU['elapsed']="%0.3f" % (elapsed,)
-                    self.rawIMU['timestamp']="%0.2f" % (time.time(),)
                 elif cmd == MultiWii.MOTOR:
                     self.motor['m1']=float(temp[0])
                     self.motor['m2']=float(temp[1])
                     self.motor['m3']=float(temp[2])
                     self.motor['m4']=float(temp[3])
-                    self.motor['elapsed']="%0.3f" % (elapsed,)
-                    self.motor['timestamp']="%0.2f" % (time.time(),)
             except(Exception) as error:
                 print("\n\nError in getDataInf on port "+self.ser.port)
                 print(str(error)+"\n\n")
