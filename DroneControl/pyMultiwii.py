@@ -147,8 +147,8 @@ class MultiWii(object):
             code = struct.unpack('<b', self.ser.read())
             data = self.ser.read(datalength)
             temp = struct.unpack('<'+'h'*(datalength//2), data)
-            self.ser.flushInput()
-            self.ser.flushOutput()
+            self.ser.reset_input_buffer()
+            self.ser.reset_output_buffer()
             if cmd == MultiWii.ATTITUDE:
                 self.attitude['angx']=float(temp[0]/10.0)
                 self.attitude['angy']=float(temp[1]/10.0)
@@ -225,8 +225,8 @@ class MultiWii(object):
                 code = struct.unpack('<b', self.ser.read())
                 data = self.ser.read(datalength)
                 temp = struct.unpack('<'+'h'*(datalength//2),data)
-                self.ser.flushInput()
-                self.ser.flushOutput()
+                self.ser.reset_input_buffer()
+                self.ser.reset_output_buffer()
                 if cmd == MultiWii.ATTITUDE:
                     self.attitude['angx']=float(temp[0]/10.0)
                     self.attitude['angy']=float(temp[1]/10.0)
