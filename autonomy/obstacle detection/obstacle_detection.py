@@ -110,7 +110,6 @@ try:
             r.set('a_thr', thr)
             r.set('a_aux1', aux1)
 
-
         elif (front_dist <= desired_distance):
             output_pwidth = K_front * front_dist + 0.0011
 
@@ -118,7 +117,7 @@ try:
             r.set('a_pitch', output_pwidth)
 
         elif (back_dist <= desired_distance):
-            output_pwidth = K_back * front_dist + 0.0011
+            output_pwidth = K_back * back_dist + 0.0019
 
             # set corrective rate
             r.set('a_pitch', output_pwidth)
