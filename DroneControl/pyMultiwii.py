@@ -99,50 +99,20 @@ class MultiWii(object):
         """Send a command to the board"""
         checksum = 0
         total_data = ['$', 'M', '<', data_length, code] + data
-        for i in struct.pack(
-                '<2B%dH' % len(data), *total_data[3:len(total_data)]):
-            checksum = checksum ^ ord(i)
-        total_data.append(checksum)
+        packet = (
+            struct.pack('<ccc', b'$', b'M', b'<') +
+            struct.pack('<BB%dH' % len(data), data_length, code, *data))
+        if type(packet[0]) is str: # python2 struct.pack returns string
+            for i in packet[3:]:
+                checksum ^= ord(i)
+        else:                      # python3 struct.pack returns bytes of ints
+            for i in packet[3:]:
+                checksum ^= i
+        packet += struct.pack('<B', checksum)
         try:
-            b = self.ser.write(
-                struct.pack('<3c2B%dHB' % len(data), *total_data))
+            self.ser.write(packet)
         except(Exception) as error:
             print("\n\nError sending command on port "+self.ser.port)
-            print(str(error)+"\n\n")
-            raise(error)
-
-    def sendCMDreceiveATT(self, data_length, code, data):
-        """Send a command to the board and receive attitude"""
-        checksum = 0
-        total_data = ['$', 'M', '<', data_length, code] + data
-        for i in struct.pack(
-                '<2B%dH' % len(data), *total_data[3:len(total_data)]):
-            checksum = checksum ^ ord(i)
-        total_data.append(checksum)
-        try:
-            start = time.time()
-            b = self.ser.write(
-                struct.pack('<3c2B%dHB' % len(data), *total_data))
-            while True:
-                header = self.ser.read()
-                if header == '$':
-                    header = header+self.ser.read(2)
-                    break
-            datalength = struct.unpack('<b', self.ser.read())[0]
-            code = struct.unpack('<b', self.ser.read())
-            data = self.ser.read(datalength)
-            temp = struct.unpack('<'+'h'*(datalength/2),data)
-            self.ser.flushInput()
-            self.ser.flushOutput()
-            elapsed = time.time() - start
-            self.attitude['angx']=float(temp[0]/10.0)
-            self.attitude['angy']=float(temp[1]/10.0)
-            self.attitude['heading']=float(temp[2])
-            self.attitude['elapsed']=round(elapsed,3)
-            self.attitude['timestamp']="%0.2f" % (time.time(),)
-            return self.attitude
-        except(Exception) as error:
-            print("\n\nError in sendCMDreceiveATT on port "+self.ser.port)
             print(str(error)+"\n\n")
             raise(error)
 
@@ -169,16 +139,15 @@ class MultiWii(object):
             start = time.time()
 
     def setPID(self,pd):
-        nd=[]
+        data=[]
         for i in np.arange(1,len(pd),2):
-            nd.append(pd[i]+pd[i+1]*256)
-        data = pd
-        print("PID sending:",data)
-        self.sendCMD(30,MultiWii.SET_PID,data)
-        self.sendCMD(0,MultiWii.EEPROM_WRITE,[])
+            data.append(pd[i]+pd[i+1]*256)
+        print("PID sending:", data)
+        self.sendCMD(30, MultiWii.SET_PID, data)
+        self.sendCMD(0, MultiWii.EEPROM_WRITE, [])
 
-    """Function to receive a data packet from the board"""
     def getData(self, cmd):
+        """Function to receive a data packet from the board"""
         try:
             start = time.time()
             self.sendCMD(0, cmd, [])
@@ -186,7 +155,7 @@ class MultiWii(object):
             datalength = struct.unpack('<b', self.ser.read())[0]
             code = struct.unpack('<b', self.ser.read())
             data = self.ser.read(datalength)
-            temp = struct.unpack('<'+'h'*(datalength/2),data)
+            temp = struct.unpack('<'+'h'*(datalength//2),data)
             self.ser.flushInput()
             self.ser.flushOutput()
             elapsed = time.time() - start
@@ -238,7 +207,7 @@ class MultiWii(object):
                     d=0
                     for t in temp:
                         dataPID.append(t%256)
-                        dataPID.append(t/256)
+                        dataPID.append(t//256)
                     for p in [0,3,6,9]:
                         dataPID[p]=dataPID[p]/10.0
                         dataPID[p+1]=dataPID[p+1]/1000.0
@@ -276,7 +245,7 @@ class MultiWii(object):
                 datalength = struct.unpack('<b', self.ser.read())[0]
                 code = struct.unpack('<b', self.ser.read())
                 data = self.ser.read(datalength)
-                temp = struct.unpack('<'+'h'*(datalength/2),data)
+                temp = struct.unpack('<'+'h'*(datalength//2),data)
                 elapsed = time.clock() - start
                 self.ser.flushInput()
                 self.ser.flushOutput()
@@ -319,55 +288,3 @@ class MultiWii(object):
         self.ser.close()
         bashCommand = "stty sane < /dev/ttyUSB0"
         os.system(bashCommand)
-
-    def getData2cmd(self, cmd):
-        """Function to ask for 2 fixed cmds: attitude and rc channels
-        
-        Note: is a bit slower than others
-        """
-        try:
-            start = time.time()
-            self.sendCMD(0,self.ATTITUDE,[])
-            while True:
-                header = self.ser.read()
-                if header == '$':
-                    header = header+self.ser.read(2)
-                    break
-            datalength = struct.unpack('<b', self.ser.read())[0]
-            code = struct.unpack('<b', self.ser.read())
-            data = self.ser.read(datalength)
-            temp = struct.unpack('<'+'h'*(datalength/2),data)
-            self.ser.flushInput()
-            self.ser.flushOutput()
-
-            self.sendCMD(0,self.RC,[])
-            while True:
-                header = self.ser.read()
-                if header == '$':
-                    header = header+self.ser.read(2)
-                    break
-            datalength = struct.unpack('<b', self.ser.read())[0]
-            code = struct.unpack('<b', self.ser.read())
-            data = self.ser.read(datalength)
-            temp2 = struct.unpack('<'+'h'*(datalength/2),data)
-            elapsed = time.time() - start
-            self.ser.flushInput()
-            self.ser.flushOutput()
-
-            if cmd == MultiWii.ATTITUDE:
-                self.message['angx']=float(temp[0]/10.0)
-                self.message['angy']=float(temp[1]/10.0)
-                self.message['heading']=float(temp[2])
-                self.message['roll']=temp2[0]
-                self.message['pitch']=temp2[1]
-                self.message['yaw']=temp2[2]
-                self.message['throttle']=temp2[3]
-                self.message['elapsed']=round(elapsed,3)
-                self.message['timestamp']="%0.2f" % (time.time(),)
-                return self.message
-            else:
-                return "No return error!"
-        except(Exception) as error:
-            print("\n\nError in getData2Cmd on port "+self.ser.port)
-            print(str(error)+"\n\n")
-            raise(error)
