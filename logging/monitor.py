@@ -1,6 +1,6 @@
 """Monitor drone sensor values
 """
-from DroneControl import DroneComm
+from dronestorm import DroneComm
 import sys
 
 drone = DroneComm(pwm_ctrl=False)
