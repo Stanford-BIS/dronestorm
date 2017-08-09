@@ -207,12 +207,8 @@ class MultiWii(object):
         packet: MSP packet without checksum created using struct.pack
         """
         checksum = 0
-        if isinstance(packet[0], str): # python2 struct.pack returns string
-            for i in packet[3:]:
-                checksum ^= ord(i)
-        else:                      # python3 struct.pack returns bytes of ints
-            for i in packet[3:]:
-                checksum ^= i
+        for i in packet[3:].decode():
+            checksum ^= ord(i)
         return checksum
 
     def send_msg(self, data_length, msg_type, data, data_format):
