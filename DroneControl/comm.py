@@ -13,7 +13,6 @@ import numpy as np
 import Adafruit_PCA9685
 import pigpio
 
-
 # identifiers
 MSP_IDENT = 100
 MSP_STATUS = 101
@@ -132,36 +131,36 @@ MSP_PAYLOAD_FMT = {
 }
 
 class MultiWii(object):
-    """Handle Multiwii Serial Protocol.
-    
+    """Handle Multiwii Serial Protocol
+
     In the Multiwii serial protocol (MSP), packets are sent serially to and from
     the flight control board.
     Data is encoded in bytes using the little endian format.
-    
+
     Packets consist of
         Header   (3 bytes)
         Size     (1 byte)
         Type     (1 byte)
         Payload  (size indicated by Size portion of packet)
         Checksum (1 byte)
-    
+
     Header is composed of 3 characters (bytes):
         byte 0: '$'
         byte 1: 'M'
         byte 2: '<' for data going to the flight control board or
                 '>' for data coming from the flight contorl board
-    
+
     Size is the number of bytes in the Payload
         Size can range from 0-255
         0 indicates no payload
-    
+
     Type indicates the type (i.e. meaning) of the message
         Types values and meanings are mapped with MultiWii class variables
-    
+
     Payload is the packet data
         Number of bytes must match the value of Size
         Specific formatting is specific to each Type
-    
+
     Checksum is the XOR of all of the bits in [Size, Type, Payload]
     """
     def __init__(self, serPort):
@@ -263,18 +262,22 @@ class MultiWii(object):
         start = time.time()
         while timer < 0.5:
             data = [1500, 1500, 1000, 1000]
-            self.send_msg(8, MSP_SET_RAW_RC, data)
+            self.send_msg(
+                8, MSP_SET_RAW_RC, data, MSP_PAYLOAD_FMT[MSP_SET_RAW_RC])
             time.sleep(0.05)
             timer = timer + (time.time() - start)
             start = time.time()
 
     def setPID(self, pd):
+        """Set the PID coefficients"""
         data = []
         for i in np.arange(1, len(pd), 2):
             data.append(pd[i]+pd[i+1]*256)
         print("PID sending:", data)
-        self.send_msg(30, MSP_SET_PID, data, )
-        self.send_msg(0, MSP_EEPROM_WRITE, [])
+        self.send_msg(
+            30, MSP_SET_PID, data, MSP_PAYLOAD_FMT[MSP_SET_PID])
+        self.send_msg(
+            0, MSP_EEPROM_WRITE, [], MSP_PAYLOAD_FMT[MSP_EEPROM_WRITE])
 
     def getData(self, cmd):
         """Function to receive a data packet from the board"""
@@ -345,11 +348,12 @@ class MultiWii(object):
             print(str(error)+"\n\n")
             raise error
 
-    def closeSerial(self):
+    def close_serial(self):
         """Close the serial port and reset the stty settings"""
         self.ser.close()
-        bashCommand = "stty sane < /dev/ttyUSB0"
-        os.system(bashCommand)
+        bash_cmd = "stty sane < /dev/ttyUSB0"
+        os.system(bash_cmd)
+
 class DroneComm(object):
     """Handles communication to and from the drone.
 
@@ -387,10 +391,10 @@ class DroneComm(object):
     TICKS = 4096
 
     # Featherboard channel map
-    ROLL_CHANNEL  = 3
+    ROLL_CHANNEL = 3
     PITCH_CHANNEL = 2
-    YAW_CHANNEL   = 1
-    THR_CHANNEL   = 0
+    YAW_CHANNEL = 1
+    THR_CHANNEL = 0
 
     # Calibration factor to compensate for mismatch between
     # requested pwm period and pwm freq implemented by Adafruit PWM generator
@@ -407,9 +411,9 @@ class DroneComm(object):
         self.period = period
 
         # store trims in units of seconds
-        self.roll_pwm_trim  = roll_pwm_trim * 1E-6
+        self.roll_pwm_trim = roll_pwm_trim * 1E-6
         self.pitch_pwm_trim = pitch_pwm_trim * 1E-6
-        self.yaw_pwm_trim   = yaw_pwm_trim * 1E-6
+        self.yaw_pwm_trim = yaw_pwm_trim * 1E-6
 
         if k_period is None:
             k_period = self.DEFAULT_K_PERIOD
@@ -509,7 +513,7 @@ class DroneComm(object):
         """
         # apply trim offset
         valid = True
-        if(width > self.MAX_WIDTH):
+        if width > self.MAX_WIDTH:
             valid = False
             width = self.MAX_WIDTH
 
@@ -523,9 +527,9 @@ class DroneComm(object):
         Checks that the width is within the accepted range
         If not, the MAX_WIDTH or MIN_WIDTH is returned
         """
-        if(width > self.MAX_WIDTH):
+        if width > self.MAX_WIDTH:
             return self.MAX_WIDTH, False
-        elif(width < self.MIN_WIDTH):
+        elif width < self.MIN_WIDTH:
             return self.MIN_WIDTH, False
         else:
             return width, True
@@ -581,9 +585,9 @@ class DroneComm(object):
         Checks that the width is within [-1, 1]
         Clips to range limit
         """
-        if(rate > 1):
+        if rate > 1:
             return 1, False
-        elif(rate < -1):
+        elif rate < -1:
             return -1, False
         else:
             return rate, True
@@ -643,7 +647,7 @@ class DroneComm(object):
         if self.pwm is not None:
             self.reset_channels()
         if self.board is not None:
-            self.board.closeSerial()
+            self.board.close_serial()
 
     def control_example(self):
         """
@@ -667,95 +671,88 @@ class DroneComm(object):
         self.reset_channels()
 
 class Reader:
-   """
-   A class to read PWM pulses and calculate their frequency
-   and duty cycle.  The frequency is how often the pulse
-   happens per second.  The duty cycle is the percentage of
-   pulse high time per cycle.
-   """
-   def __init__(self, pi, gpio, weighting=0.0):
-      """
-      Instantiate with the Pi and gpio of the PWM signal
-      to monitor.
+    """A class to read PWM pulses and calculate their frequency
+    and duty cycle.  The frequency is how often the pulse
+    happens per second.  The duty cycle is the percentage of
+    pulse high time per cycle.
+    """
+    def __init__(self, rpi, gpio, weighting=0.0):
+        """
+        Instantiate with the Pi and gpio of the PWM signal
+        to monitor.
 
-      Optionally a weighting may be specified.  This is a number
-      between 0 and 1 and indicates how much the old reading
-      affects the new reading.  It defaults to 0 which means
-      the old reading has no effect.  This may be used to
-      smooth the data.
-      """
-      self.pi = pi
-      self.gpio = gpio
+        Optionally a weighting may be specified.  This is a number
+        between 0 and 1 and indicates how much the old reading
+        affects the new reading.  It defaults to 0 which means
+        the old reading has no effect.  This may be used to
+        smooth the data.
+        """
+        self.rpi = rpi
+        self.gpio = gpio
 
-      if weighting < 0.0:
-         weighting = 0.0
-      elif weighting > 0.99:
-         weighting = 0.99
+        if weighting < 0.0:
+            weighting = 0.0
+        elif weighting > 0.99:
+            weighting = 0.99
 
-      self._new = 1.0 - weighting # Weighting for new reading.
-      self._old = weighting       # Weighting for old reading.
+        self._new = 1.0 - weighting # Weighting for new reading.
+        self._old = weighting       # Weighting for old reading.
 
-      self._high_tick = None
-      self._period = None
-      self._high = None
+        self._high_tick = None
+        self._period = None
+        self._high = None
 
-      pi.set_mode(gpio, pigpio.INPUT)
+        rpi.set_mode(gpio, pigpio.INPUT)
 
-      self._cb = pi.callback(gpio, pigpio.EITHER_EDGE, self._cbf)
+        self._cb = rpi.callback(gpio, pigpio.EITHER_EDGE, self._cbf)
 
-   def _cbf(self, gpio, level, tick):
+    def _cbf(self, gpio, level, tick):
+        if level == 1:
+            if self._high_tick is not None:
+                t = pigpio.tickDiff(self._high_tick, tick)
+                if self._period is not None:
+                    self._period = (self._old * self._period) + (self._new * t)
+                else:
+                    self._period = t
+            self._high_tick = tick
 
-      if level == 1:
+        elif level == 0:
+            if self._high_tick is not None:
+                t = pigpio.tickDiff(self._high_tick, tick)
+                if self._high is not None:
+                    self._high = (self._old * self._high) + (self._new * t)
+                else:
+                    self._high = t
 
-         if self._high_tick is not None:
-            t = pigpio.tickDiff(self._high_tick, tick)
+    def frequency(self):
+        """
+        Returns the PWM frequency.
+        """
+        if self._period is not None:
+            return 1000000.0 / self._period
+        else:
+            return 0.0
 
-            if self._period is not None:
-               self._period = (self._old * self._period) + (self._new * t)
-            else:
-               self._period = t
+    def pulse_width(self):
+        """
+        Returns the PWM pulse width in microseconds.
+        """
+        if self._high is not None:
+            return self._high / 1000000
+        else:
+            return 0.0
 
-         self._high_tick = tick
+    def duty_cycle(self):
+        """
+        Returns the PWM duty cycle percentage.
+        """
+        if self._high is not None:
+            return 100.0 * self._high / self._period
+        else:
+            return 0.0
 
-      elif level == 0:
-
-         if self._high_tick is not None:
-            t = pigpio.tickDiff(self._high_tick, tick)
-
-            if self._high is not None:
-               self._high = (self._old * self._high) + (self._new * t)
-            else:
-               self._high = t
-
-   def frequency(self):
-      """
-      Returns the PWM frequency.
-      """
-      if self._period is not None:
-         return 1000000.0 / self._period
-      else:
-         return 0.0
-
-   def pulse_width(self):
-      """
-      Returns the PWM pulse width in microseconds.
-      """
-      if self._high is not None:
-         return self._high / 1000000
-      else:
-         return 0.0
-
-   def duty_cycle(self):
-      """
-      Returns the PWM duty cycle percentage.
-      """
-      if self._high is not None:
-         return 100.0 * self._high / self._period
-      else:
-         return 0.0
-
-   def cancel(self):
-      """
-      Cancels the reader and releases resources.
-      """
-      self._cb.cancel()
+    def cancel(self):
+        """
+        Cancels the reader and releases resources.
+        """
+        self._cb.cancel()
