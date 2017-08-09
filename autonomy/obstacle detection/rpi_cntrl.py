@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 import time, sys, redis
 import numpy as np
-from DroneControl import DroneComm
+from dronestorm import DroneComm
 
 host = '127.0.0.1'
 r = redis.StrictRedis(host=host)

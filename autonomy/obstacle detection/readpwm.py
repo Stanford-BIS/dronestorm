@@ -1,7 +1,7 @@
 import time, sys, redis, pigpio
 import numpy as np
 import RPi.GPIO as GPIO
-from DroneControl import Reader
+from dronestorm import Reader
 
 YAW_CHN = 27
 ROLL_CHN = 22
