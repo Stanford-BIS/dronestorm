@@ -5,7 +5,7 @@ Run a redis server on a computer attached to the network
     computers
 Note the ip address or hostname of the computer running the redis server
 """
-from DroneControl import DroneComm
+from dronestorm import DroneComm
 import redis
 import sys
 
