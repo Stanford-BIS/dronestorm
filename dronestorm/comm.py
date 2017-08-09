@@ -10,7 +10,6 @@ import time
 import struct
 import os
 import serial
-import numpy as np
 import Adafruit_PCA9685
 import pigpio
 
@@ -165,22 +164,18 @@ class MultiWii(object):
     Checksum is the XOR of all of the bits in [Size, Type, Payload]
     """
     def __init__(self, serPort):
-        self.PIDcoef = {
+        self.attitude = {'angx':0, 'angy':0, 'heading':0}
+        self.altitude = {'estalt':0, 'vario':0}
+        self.pid_coef = {
             'rp':0, 'ri':0, 'rd':0,
             'pp':0, 'pi':0, 'pd':0,
             'yp':0, 'yi':0, 'yd':0}
-        self.rcChannels = {'roll':0, 'pitch':0, 'yaw':0, 'throttle':0}
-        self.rawIMU = {
+        self.rc_channels = {'roll':0, 'pitch':0, 'yaw':0, 'throttle':0}
+        self.raw_imu = {
             'ax':0, 'ay':0, 'az':0,
             'gx':0, 'gy':0, 'gz':0,
             'mx':0, 'my':0, 'mz':0}
         self.motor = {'m1':0, 'm2':0, 'm3':0, 'm4':0}
-        self.attitude = {'angx':0, 'angy':0, 'heading':0}
-        self.altitude = {'estalt':0, 'vario':0}
-        self.message = {
-            'angx':0, 'angy':0, 'heading':0,
-            'roll':0, 'pitch':0, 'yaw':0, 'throttle':0}
-        self.elapsed = 0
 
         self.ser = serial.Serial()
         self.ser.port = serPort
@@ -232,7 +227,7 @@ class MultiWii(object):
         packet = (
             struct.pack('<ccc', b'$', b'M', b'<') +
             struct.pack('<BB', data_length, msg_type) +
-            struct.pack('<%dH' % len(data), *data))
+            struct.pack(data_format, *data))
         packet += struct.pack('<B', self.compute_checksum(packet))
         try:
             self.ser.write(packet)
@@ -266,16 +261,9 @@ class MultiWii(object):
             timer = timer + (time.time() - start)
             start = time.time()
 
-    def setPID(self, pd):
+    def set_pid(self, pid_coeff):
         """Set the PID coefficients"""
-        data = []
-        for i in np.arange(1, len(pd), 2):
-            data.append(pd[i]+pd[i+1]*256)
-        print("PID sending:", data)
-        self.send_msg(
-            30, MSP_SET_PID, data, MSP_PAYLOAD_FMT[MSP_SET_PID])
-        self.send_msg(
-            0, MSP_EEPROM_WRITE, [], MSP_PAYLOAD_FMT[MSP_EEPROM_WRITE])
+        raise NotImplementedError
 
     def get_data(self, cmd):
         """Function to request and receive a data packet from the board
@@ -325,55 +313,55 @@ class MultiWii(object):
     def get_rc(self):
         """Get the rc data"""
         data = self.get_data(MSP_RC)
-        self.rcChannels['roll'] = temp[0]
-        self.rcChannels['pitch'] = temp[1]
-        self.rcChannels['yaw'] = temp[2]
-        self.rcChannels['throttle'] = temp[3]
-        return self.rcChannels
-    
+        self.rc_channels['roll'] = data[0]
+        self.rc_channels['pitch'] = data[1]
+        self.rc_channels['yaw'] = data[2]
+        self.rc_channels['throttle'] = data[3]
+        return self.rc_channels
+
     def get_raw_imu(self):
         """Get the raw imu data"""
         data = self.get_data(MSP_RAW_IMU)
-        self.rawIMU['ax'] = float(data[0])
-        self.rawIMU['ay'] = float(data[1])
-        self.rawIMU['az'] = float(data[2])
-        self.rawIMU['gx'] = float(data[3])
-        self.rawIMU['gy'] = float(data[4])
-        self.rawIMU['gz'] = float(data[5])
-        self.rawIMU['mx'] = float(data[6])
-        self.rawIMU['my'] = float(data[7])
-        self.rawIMU['mz'] = float(data[8])
-        return self.rawIMU
+        self.raw_imu['ax'] = float(data[0])
+        self.raw_imu['ay'] = float(data[1])
+        self.raw_imu['az'] = float(data[2])
+        self.raw_imu['gx'] = float(data[3])
+        self.raw_imu['gy'] = float(data[4])
+        self.raw_imu['gz'] = float(data[5])
+        self.raw_imu['mx'] = float(data[6])
+        self.raw_imu['my'] = float(data[7])
+        self.raw_imu['mz'] = float(data[8])
+        return self.raw_imu
 
     def get_motor(self):
         """Get the motor data"""
         data = self.get_data(MSP_MOTOR)
-        self.motor['m1'] = float(temp[0])
-        self.motor['m2'] = float(temp[1])
-        self.motor['m3'] = float(temp[2])
-        self.motor['m4'] = float(temp[3])
+        self.motor['m1'] = float(data[0])
+        self.motor['m2'] = float(data[1])
+        self.motor['m3'] = float(data[2])
+        self.motor['m4'] = float(data[3])
         return self.motor
 
     def get_pid_coeff(self):
         """Get the PID coefficients"""
         data = self.get_data(MSP_PID)
-        dataPID = []
+        data_pid = []
         for data_val in data:
-            dataPID.append(data_val%256)
-            dataPID.append(data_val//256)
+            data_pid.append(data_val%256)
+            data_pid.append(data_val//256)
         for idx in [0, 3, 6, 9]:
-            dataPID[idx] = dataPID[idx]/10.0
-            dataPID[idx+1] = dataPID[idx+1]/1000.0
-        self.PIDcoef['rp'] = dataPID[0]
-        self.PIDcoef['ri'] = dataPID[1]
-        self.PIDcoef['rd'] = dataPID[2]
-        self.PIDcoef['pp'] = dataPID[3]
-        self.PIDcoef['pi'] = dataPID[4]
-        self.PIDcoef['pd'] = dataPID[5]
-        self.PIDcoef['yp'] = dataPID[6]
-        self.PIDcoef['yi'] = dataPID[7]
-        self.PIDcoef['yd'] = dataPID[8]
-        return self.PIDcoef
+            data_pid[idx] = data_pid[idx]/10.0
+            data_pid[idx+1] = data_pid[idx+1]/1000.0
+        self.pid_coef['rp'] = data_pid[0]
+        self.pid_coef['ri'] = data_pid[1]
+        self.pid_coef['rd'] = data_pid[2]
+        self.pid_coef['pp'] = data_pid[3]
+        self.pid_coef['pi'] = data_pid[4]
+        self.pid_coef['pd'] = data_pid[5]
+        self.pid_coef['yp'] = data_pid[6]
+        self.pid_coef['yi'] = data_pid[7]
+        self.pid_coef['yd'] = data_pid[8]
+        return self.pid_coef
 
     def close_serial(self):
         """Close the serial port and reset the stty settings"""
@@ -642,27 +630,27 @@ class DroneComm(object):
 
     def get_ax(self):
         """Returns the x acceleration"""
-        return self.board.rawIMU["ax"]
+        return self.board.raw_imu["ax"]
 
     def get_ay(self):
         """Returns the y acceleration"""
-        return self.board.rawIMU["ay"]
+        return self.board.raw_imu["ay"]
 
     def get_az(self):
         """Returns the z acceleration"""
-        return self.board.rawIMU["az"]
+        return self.board.raw_imu["az"]
 
     def get_droll(self):
         """Returns the roll angular velocity"""
-        return self.board.rawIMU["gx"]
+        return self.board.raw_imu["gx"]
 
     def get_dpitch(self):
         """Returns the pitch angular velocity"""
-        return self.board.rawIMU["gy"]
+        return self.board.raw_imu["gy"]
 
     def get_dyaw(self):
         """Returns the yaw angular velocity"""
-        return self.board.rawIMU["gz"]
+        return self.board.raw_imu["gz"]
 
     def exit(self):
         """
@@ -731,22 +719,22 @@ class Reader:
         self._cb = rpi.callback(gpio, pigpio.EITHER_EDGE, self._cbf)
 
     def _cbf(self, gpio, level, tick):
+        """Callback function to trigger when level changes"""
         if level == 1:
             if self._high_tick is not None:
-                t = pigpio.tickDiff(self._high_tick, tick)
+                t_diff = pigpio.tickDiff(self._high_tick, tick)
                 if self._period is not None:
-                    self._period = (self._old * self._period) + (self._new * t)
+                    self._period = self._old*self._period + self._new*t_diff
                 else:
-                    self._period = t
+                    self._period = t_diff
             self._high_tick = tick
-
         elif level == 0:
             if self._high_tick is not None:
-                t = pigpio.tickDiff(self._high_tick, tick)
+                t_diff = pigpio.tickDiff(self._high_tick, tick)
                 if self._high is not None:
-                    self._high = (self._old * self._high) + (self._new * t)
+                    self._high = self._old*self._high + self._new*t_diff
                 else:
-                    self._high = t
+                    self._high = t_diff
 
     def frequency(self):
         """
