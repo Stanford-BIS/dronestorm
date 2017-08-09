@@ -5,6 +5,7 @@ Transmits attitude commands: roll, pitch, yaw
 """
 
 from __future__ import division
+from __future__ import print_function
 import time
 import struct
 import os
@@ -199,7 +200,8 @@ class MultiWii(object):
             print(str(error)+"\n\n")
             raise error
 
-    def compute_checksum(self, packet):
+    @staticmethod
+    def compute_checksum(packet):
         """Computes the MSP checksum
 
         Input
@@ -275,74 +277,103 @@ class MultiWii(object):
         self.send_msg(
             0, MSP_EEPROM_WRITE, [], MSP_PAYLOAD_FMT[MSP_EEPROM_WRITE])
 
-    def getData(self, cmd):
-        """Function to receive a data packet from the board"""
+    def get_data(self, cmd):
+        """Function to request and receive a data packet from the board
+
+        Inputs
+        ------
+        cmd : int
+            command as defined by the MSP_* identifiers
+
+        Outputs
+        -------
+        data : list
+            data decoded from serial stream according to MSP protocol
+        """
         try:
             self.send_msg(0, cmd, [], '')
-            header = self.ser.read(3)
-            datalength = struct.unpack('<b', self.ser.read())[0]
-            code = struct.unpack('<b', self.ser.read())
-            data = self.ser.read(datalength)
-            temp = struct.unpack(MSP_PAYLOAD_FMT[cmd], data)
+            header = self.ser.read(5).decode() # [$, M, {<, >}, size, type]
+            datalength = ord(header[3])
+            msg_type = ord(header[4])
+            # check that message received matches expected message
+            assert msg_type == cmd, "Unexpected MSP message type detected"
+            buf = self.ser.read(datalength)
+            data = struct.unpack(MSP_PAYLOAD_FMT[cmd], buf)
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
-            if cmd == MSP_ATTITUDE:
-                self.attitude['angx'] = float(temp[0]/10.0)
-                self.attitude['angy'] = float(temp[1]/10.0)
-                self.attitude['heading'] = float(temp[2])
-                return self.attitude
-            elif cmd == MSP_ALTITUDE:
-                self.altitude['estalt'] = float(temp[0])
-                self.altitude['vario'] = float(temp[1])
-                return self.rcChannels
-            elif cmd == MSP_RC:
-                self.rcChannels['roll'] = temp[0]
-                self.rcChannels['pitch'] = temp[1]
-                self.rcChannels['yaw'] = temp[2]
-                self.rcChannels['throttle'] = temp[3]
-                return self.rcChannels
-            elif cmd == MSP_RAW_IMU:
-                self.rawIMU['ax'] = float(temp[0])
-                self.rawIMU['ay'] = float(temp[1])
-                self.rawIMU['az'] = float(temp[2])
-                self.rawIMU['gx'] = float(temp[3])
-                self.rawIMU['gy'] = float(temp[4])
-                self.rawIMU['gz'] = float(temp[5])
-                self.rawIMU['mx'] = float(temp[6])
-                self.rawIMU['my'] = float(temp[7])
-                self.rawIMU['mz'] = float(temp[8])
-                return self.rawIMU
-            elif cmd == MSP_MOTOR:
-                self.motor['m1'] = float(temp[0])
-                self.motor['m2'] = float(temp[1])
-                self.motor['m3'] = float(temp[2])
-                self.motor['m4'] = float(temp[3])
-                return self.motor
-            elif cmd == MSP_PID:
-                dataPID = []
-                if len(temp) > 1:
-                    for t in temp:
-                        dataPID.append(t%256)
-                        dataPID.append(t//256)
-                    for p in [0, 3, 6, 9]:
-                        dataPID[p] = dataPID[p]/10.0
-                        dataPID[p+1] = dataPID[p+1]/1000.0
-                    self.PIDcoef['rp'] = dataPID[0]
-                    self.PIDcoef['ri'] = dataPID[1]
-                    self.PIDcoef['rd'] = dataPID[2]
-                    self.PIDcoef['pp'] = dataPID[3]
-                    self.PIDcoef['pi'] = dataPID[4]
-                    self.PIDcoef['pd'] = dataPID[5]
-                    self.PIDcoef['yp'] = dataPID[6]
-                    self.PIDcoef['yi'] = dataPID[7]
-                    self.PIDcoef['yd'] = dataPID[8]
-                return self.PIDcoef
-            else:
-                return "No return error!"
         except(Exception) as error:
             print("\n\nError in getData on port "+self.ser.port)
             print(str(error)+"\n\n")
             raise error
+        return data
+
+    def get_attitude(self):
+        """Get the attitude data"""
+        data = self.get_data(MSP_ATTITUDE)
+        self.attitude['angx'] = float(data[0]/10.0)
+        self.attitude['angy'] = float(data[1]/10.0)
+        self.attitude['heading'] = float(data[2])
+        return self.attitude
+
+    def get_altitute(self):
+        """Get the altitude data"""
+        data = self.get_data(MSP_ALTITUDE)
+        self.altitude['estalt'] = float(data[0])
+        self.altitude['vario'] = float(data[1])
+        return self.altitude
+
+    def get_rc(self):
+        """Get the rc data"""
+        data = self.get_data(MSP_RC)
+        self.rcChannels['roll'] = temp[0]
+        self.rcChannels['pitch'] = temp[1]
+        self.rcChannels['yaw'] = temp[2]
+        self.rcChannels['throttle'] = temp[3]
+        return self.rcChannels
+    
+    def get_raw_imu(self):
+        """Get the raw imu data"""
+        data = self.get_data(MSP_RAW_IMU)
+        self.rawIMU['ax'] = float(data[0])
+        self.rawIMU['ay'] = float(data[1])
+        self.rawIMU['az'] = float(data[2])
+        self.rawIMU['gx'] = float(data[3])
+        self.rawIMU['gy'] = float(data[4])
+        self.rawIMU['gz'] = float(data[5])
+        self.rawIMU['mx'] = float(data[6])
+        self.rawIMU['my'] = float(data[7])
+        self.rawIMU['mz'] = float(data[8])
+        return self.rawIMU
+
+    def get_motor(self):
+        """Get the motor data"""
+        data = self.get_data(MSP_MOTOR)
+        self.motor['m1'] = float(temp[0])
+        self.motor['m2'] = float(temp[1])
+        self.motor['m3'] = float(temp[2])
+        self.motor['m4'] = float(temp[3])
+        return self.motor
+
+    def get_pid_coeff(self):
+        """Get the PID coefficients"""
+        data = self.get_data(MSP_PID)
+        dataPID = []
+        for data_val in data:
+            dataPID.append(data_val%256)
+            dataPID.append(data_val//256)
+        for idx in [0, 3, 6, 9]:
+            dataPID[idx] = dataPID[idx]/10.0
+            dataPID[idx+1] = dataPID[idx+1]/1000.0
+        self.PIDcoef['rp'] = dataPID[0]
+        self.PIDcoef['ri'] = dataPID[1]
+        self.PIDcoef['rd'] = dataPID[2]
+        self.PIDcoef['pp'] = dataPID[3]
+        self.PIDcoef['pi'] = dataPID[4]
+        self.PIDcoef['pd'] = dataPID[5]
+        self.PIDcoef['yp'] = dataPID[6]
+        self.PIDcoef['yi'] = dataPID[7]
+        self.PIDcoef['yd'] = dataPID[8]
+        return self.PIDcoef
 
     def close_serial(self):
         """Close the serial port and reset the stty settings"""
@@ -575,7 +606,8 @@ class DroneComm(object):
         if not valid:
             print("WARNING: Requested yaw rate out of range!")
 
-    def validate_rate(self, rate):
+    @staticmethod
+    def validate_rate(rate):
         """Validate the requested channel rate is valid
 
         Checks that the width is within [-1, 1]
@@ -589,16 +621,12 @@ class DroneComm(object):
             return rate, True
 
     def update_attitude(self):
-        """
-        Updates the Attitude telemetry data from the Naze32 flight controller
-        """
-        self.board.getData(MSP_ATTITUDE)
+        """Update the attitude data from the flight controller"""
+        self.board.get_attitude()
 
     def update_imu(self):
-        """
-        Updates the IMU telemetry data from the Naze32 flight controller
-        """
-        self.board.getData(MSP_RAW_IMU)
+        """Updates the IMU data from the flight controller"""
+        self.board.get_raw_imu()
 
     def get_roll(self):
         """Returns the roll angle"""
