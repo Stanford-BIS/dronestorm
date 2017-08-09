@@ -5,9 +5,351 @@ Transmits attitude commands: roll, pitch, yaw
 """
 
 from __future__ import division
-from .pyMultiwii import MultiWii
-import Adafruit_PCA9685, time, pigpio
+import time
+import struct
+import os
+import serial
+import numpy as np
+import Adafruit_PCA9685
+import pigpio
 
+
+# identifiers
+MSP_IDENT = 100
+MSP_STATUS = 101
+MSP_RAW_IMU = 102
+MSP_SERVO = 103
+MSP_MOTOR = 104
+MSP_RC = 105
+MSP_RAW_GPS = 106
+MSP_COMP_GPS = 107
+MSP_ATTITUDE = 108
+MSP_ALTITUDE = 109
+MSP_ANALOG = 110
+MSP_RC_TUNING = 111
+MSP_PID = 112
+MSP_BOX = 113
+MSP_MISC = 114
+MSP_MOTOR_PINS = 115
+MSP_BOXNAMES = 116
+MSP_PIDNAMES = 117
+MSP_WP = 118
+MSP_BOXIDS = 119
+MSP_RC_RAW_IMU = 121
+MSP_SET_RAW_RC = 200
+MSP_SET_RAW_GPS = 201
+MSP_SET_PID = 202
+MSP_SET_BOX = 203
+MSP_SET_RC_TUNING = 204
+MSP_ACC_CALIBRATION = 205
+MSP_MAG_CALIBRATION = 206
+MSP_SET_MISC = 207
+MSP_RESET_CONF = 208
+MSP_SET_WP = 209
+MSP_SWITCH_RC_SERIAL = 210
+MSP_IS_SERIAL = 211
+MSP_EEPROM_WRITE = 250
+MSP_DEBUG = 254
+
+# payload byte lengths
+# None means not implemented yet
+MSP_PAYLOAD_LEN = {
+    MSP_IDENT : 7,
+    MSP_STATUS : 11,
+    MSP_RAW_IMU : 18,
+    MSP_SERVO : None,
+    MSP_MOTOR : None,
+    MSP_RC : 16,
+    MSP_RAW_GPS : 14,
+    MSP_COMP_GPS : 5,
+    MSP_ATTITUDE : 6,
+    MSP_ALTITUDE : 6,
+    MSP_ANALOG : 7,
+    MSP_RC_TUNING : 7,
+    MSP_PID : None,
+    MSP_BOX : None,
+    MSP_MISC : None,
+    MSP_MOTOR_PINS : None,
+    MSP_BOXNAMES : None,
+    MSP_PIDNAMES : None,
+    MSP_WP : 18,
+    MSP_BOXIDS : None,
+    MSP_RC_RAW_IMU : None,
+    MSP_SET_RAW_RC : 16,
+    MSP_SET_RAW_GPS : 14,
+    MSP_SET_PID : None,
+    MSP_SET_BOX : None,
+    MSP_SET_RC_TUNING : 7,
+    MSP_ACC_CALIBRATION : 0,
+    MSP_MAG_CALIBRATION : 0,
+    MSP_SET_MISC : None,
+    MSP_RESET_CONF : 0,
+    MSP_SET_WP : 18,
+    MSP_SWITCH_RC_SERIAL : None,
+    MSP_IS_SERIAL : None,
+    MSP_EEPROM_WRITE : 0,
+    MSP_DEBUG : None
+}
+
+# payload format strings
+# None means not implemented yet
+MSP_PAYLOAD_FMT = {
+    MSP_IDENT : '<BBBI',
+    MSP_STATUS : '<HHHIB',
+    MSP_RAW_IMU : '<9h',
+    MSP_SERVO : None,
+    MSP_MOTOR : None,
+    MSP_RC : '<8H',
+    MSP_RAW_GPS : '<BBIIHHH',
+    MSP_COMP_GPS : None,
+    MSP_ATTITUDE : '<3h',
+    MSP_ALTITUDE : '<ih',
+    MSP_ANALOG : '<BHHH',
+    MSP_RC_TUNING : '<BBBBBBB',
+    MSP_PID : None,
+    MSP_BOX : None,
+    MSP_MISC : None,
+    MSP_MOTOR_PINS : None,
+    MSP_BOXNAMES : None,
+    MSP_PIDNAMES : None,
+    MSP_WP : '<BIIIHHB',
+    MSP_BOXIDS : None,
+    MSP_RC_RAW_IMU : None,
+    MSP_SET_RAW_RC : '<8H',
+    MSP_SET_RAW_GPS : '<BBIIHHH',
+    MSP_SET_PID : None,
+    MSP_SET_BOX : None,
+    MSP_SET_RC_TUNING : '<BBBBBBB',
+    MSP_ACC_CALIBRATION : '',
+    MSP_MAG_CALIBRATION : '',
+    MSP_SET_MISC : None,
+    MSP_RESET_CONF : '',
+    MSP_SET_WP : '<BIIIHHB',
+    MSP_SWITCH_RC_SERIAL : None,
+    MSP_IS_SERIAL : None,
+    MSP_EEPROM_WRITE : '',
+    MSP_DEBUG : None
+}
+
+class MultiWii(object):
+    """Handle Multiwii Serial Protocol.
+    
+    In the Multiwii serial protocol (MSP), packets are sent serially to and from
+    the flight control board.
+    Data is encoded in bytes using the little endian format.
+    
+    Packets consist of
+        Header   (3 bytes)
+        Size     (1 byte)
+        Type     (1 byte)
+        Payload  (size indicated by Size portion of packet)
+        Checksum (1 byte)
+    
+    Header is composed of 3 characters (bytes):
+        byte 0: '$'
+        byte 1: 'M'
+        byte 2: '<' for data going to the flight control board or
+                '>' for data coming from the flight contorl board
+    
+    Size is the number of bytes in the Payload
+        Size can range from 0-255
+        0 indicates no payload
+    
+    Type indicates the type (i.e. meaning) of the message
+        Types values and meanings are mapped with MultiWii class variables
+    
+    Payload is the packet data
+        Number of bytes must match the value of Size
+        Specific formatting is specific to each Type
+    
+    Checksum is the XOR of all of the bits in [Size, Type, Payload]
+    """
+    def __init__(self, serPort):
+        self.PIDcoef = {
+            'rp':0, 'ri':0, 'rd':0,
+            'pp':0, 'pi':0, 'pd':0,
+            'yp':0, 'yi':0, 'yd':0}
+        self.rcChannels = {'roll':0, 'pitch':0, 'yaw':0, 'throttle':0}
+        self.rawIMU = {
+            'ax':0, 'ay':0, 'az':0,
+            'gx':0, 'gy':0, 'gz':0,
+            'mx':0, 'my':0, 'mz':0}
+        self.motor = {'m1':0, 'm2':0, 'm3':0, 'm4':0}
+        self.attitude = {'angx':0, 'angy':0, 'heading':0}
+        self.altitude = {'estalt':0, 'vario':0}
+        self.message = {
+            'angx':0, 'angy':0, 'heading':0,
+            'roll':0, 'pitch':0, 'yaw':0, 'throttle':0}
+        self.elapsed = 0
+
+        self.ser = serial.Serial()
+        self.ser.port = serPort
+        self.ser.baudrate = 115200
+        self.ser.bytesize = serial.EIGHTBITS
+        self.ser.parity = serial.PARITY_NONE
+        self.ser.stopbits = serial.STOPBITS_ONE
+        self.ser.timeout = None
+        self.ser.xonxoff = False
+        self.ser.rtscts = False
+        self.ser.dsrdtr = False
+        self.ser.writeTimeout = 2
+        try:
+            self.ser.open()
+        except(Exception) as error:
+            print("\n\nError opening port "+self.ser.port +":")
+            print(str(error)+"\n\n")
+            raise error
+
+    def compute_checksum(self, packet):
+        """Computes the MSP checksum
+
+        Input
+        -----
+        packet: MSP packet without checksum created using struct.pack
+        """
+        checksum = 0
+        if isinstance(packet[0], str): # python2 struct.pack returns string
+            for i in packet[3:]:
+                checksum ^= ord(i)
+        else:                      # python3 struct.pack returns bytes of ints
+            for i in packet[3:]:
+                checksum ^= i
+        return checksum
+
+    def send_msg(self, data_length, msg_type, data, data_format):
+        """Send a message to the flight control board
+
+        Inputs
+        ------
+        data_length: int
+            length, in bytes, of the payload data
+        msg_type: int
+            message type identifier
+            specified as one of the class variables
+        data: list of data items
+            data list contents specific to the message type
+        data_format: string
+            formatting string to use by struct.pack to pack data into packet
+            mapped in class variable MSP_PAYLOAD_FMT
+        """
+        packet = (
+            struct.pack('<ccc', b'$', b'M', b'<') +
+            struct.pack('<BB', data_length, msg_type) +
+            struct.pack('<%dH' % len(data), *data))
+        packet += struct.pack('<B', self.compute_checksum(packet))
+        try:
+            self.ser.write(packet)
+        except(Exception) as error:
+            print("\n\nError sending command on port " + self.ser.port)
+            print(str(error) + "\n\n")
+            raise error
+
+    def arm(self):
+        """Arms the motors"""
+        timer = 0
+        start = time.time()
+        while timer < 0.5:
+            data = [1500, 1500, 2000, 1000]
+            self.send_msg(
+                8, MSP_SET_RAW_RC, data,
+                MSP_PAYLOAD_FMT[MSP_SET_RAW_RC])
+            time.sleep(0.05)
+            timer = timer + (time.time() - start)
+            start = time.time()
+
+    def disarm(self):
+        """Disarms the motors"""
+        timer = 0
+        start = time.time()
+        while timer < 0.5:
+            data = [1500, 1500, 1000, 1000]
+            self.send_msg(8, MSP_SET_RAW_RC, data)
+            time.sleep(0.05)
+            timer = timer + (time.time() - start)
+            start = time.time()
+
+    def setPID(self, pd):
+        data = []
+        for i in np.arange(1, len(pd), 2):
+            data.append(pd[i]+pd[i+1]*256)
+        print("PID sending:", data)
+        self.send_msg(30, MSP_SET_PID, data, )
+        self.send_msg(0, MSP_EEPROM_WRITE, [])
+
+    def getData(self, cmd):
+        """Function to receive a data packet from the board"""
+        try:
+            self.send_msg(0, cmd, [], '')
+            header = self.ser.read(3)
+            datalength = struct.unpack('<b', self.ser.read())[0]
+            code = struct.unpack('<b', self.ser.read())
+            data = self.ser.read(datalength)
+            temp = struct.unpack(MSP_PAYLOAD_FMT[cmd], data)
+            self.ser.reset_input_buffer()
+            self.ser.reset_output_buffer()
+            if cmd == MSP_ATTITUDE:
+                self.attitude['angx'] = float(temp[0]/10.0)
+                self.attitude['angy'] = float(temp[1]/10.0)
+                self.attitude['heading'] = float(temp[2])
+                return self.attitude
+            elif cmd == MSP_ALTITUDE:
+                self.altitude['estalt'] = float(temp[0])
+                self.altitude['vario'] = float(temp[1])
+                return self.rcChannels
+            elif cmd == MSP_RC:
+                self.rcChannels['roll'] = temp[0]
+                self.rcChannels['pitch'] = temp[1]
+                self.rcChannels['yaw'] = temp[2]
+                self.rcChannels['throttle'] = temp[3]
+                return self.rcChannels
+            elif cmd == MSP_RAW_IMU:
+                self.rawIMU['ax'] = float(temp[0])
+                self.rawIMU['ay'] = float(temp[1])
+                self.rawIMU['az'] = float(temp[2])
+                self.rawIMU['gx'] = float(temp[3])
+                self.rawIMU['gy'] = float(temp[4])
+                self.rawIMU['gz'] = float(temp[5])
+                self.rawIMU['mx'] = float(temp[6])
+                self.rawIMU['my'] = float(temp[7])
+                self.rawIMU['mz'] = float(temp[8])
+                return self.rawIMU
+            elif cmd == MSP_MOTOR:
+                self.motor['m1'] = float(temp[0])
+                self.motor['m2'] = float(temp[1])
+                self.motor['m3'] = float(temp[2])
+                self.motor['m4'] = float(temp[3])
+                return self.motor
+            elif cmd == MSP_PID:
+                dataPID = []
+                if len(temp) > 1:
+                    for t in temp:
+                        dataPID.append(t%256)
+                        dataPID.append(t//256)
+                    for p in [0, 3, 6, 9]:
+                        dataPID[p] = dataPID[p]/10.0
+                        dataPID[p+1] = dataPID[p+1]/1000.0
+                    self.PIDcoef['rp'] = dataPID[0]
+                    self.PIDcoef['ri'] = dataPID[1]
+                    self.PIDcoef['rd'] = dataPID[2]
+                    self.PIDcoef['pp'] = dataPID[3]
+                    self.PIDcoef['pi'] = dataPID[4]
+                    self.PIDcoef['pd'] = dataPID[5]
+                    self.PIDcoef['yp'] = dataPID[6]
+                    self.PIDcoef['yi'] = dataPID[7]
+                    self.PIDcoef['yd'] = dataPID[8]
+                return self.PIDcoef
+            else:
+                return "No return error!"
+        except(Exception) as error:
+            print("\n\nError in getData on port "+self.ser.port)
+            print(str(error)+"\n\n")
+            raise error
+
+    def closeSerial(self):
+        """Close the serial port and reset the stty settings"""
+        self.ser.close()
+        bashCommand = "stty sane < /dev/ttyUSB0"
+        os.system(bashCommand)
 class DroneComm(object):
     """Handles communication to and from the drone.
 
@@ -250,13 +592,13 @@ class DroneComm(object):
         """
         Updates the Attitude telemetry data from the Naze32 flight controller
         """
-        self.board.getData(MultiWii.MSP_ATTITUDE)
+        self.board.getData(MSP_ATTITUDE)
 
     def update_imu(self):
         """
         Updates the IMU telemetry data from the Naze32 flight controller
         """
-        self.board.getData(MultiWii.MSP_RAW_IMU)
+        self.board.getData(MSP_RAW_IMU)
 
     def get_roll(self):
         """Returns the roll angle"""
