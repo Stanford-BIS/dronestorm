@@ -250,13 +250,13 @@ class DroneComm(object):
         """
         Updates the Attitude telemetry data from the Naze32 flight controller
         """
-        self.board.getData(MultiWii.ATTITUDE)
+        self.board.getData(MultiWii.MSP_ATTITUDE)
 
     def update_imu(self):
         """
         Updates the IMU telemetry data from the Naze32 flight controller
         """
-        self.board.getData(MultiWii.RAW_IMU)
+        self.board.getData(MultiWii.MSP_RAW_IMU)
 
     def get_roll(self):
         """Returns the roll angle"""

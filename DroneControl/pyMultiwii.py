@@ -1,55 +1,74 @@
-"""multiwii.py: Handles Multiwii Serial Protocol."""
+"""multiwii.py: Handle Multiwii Serial Protocol.
 
-__author__ = "Aldo Vargas"
-__copyright__ = "Copyright 2017 Altax.net"
+In the Multiwii serial protocol (MSP), packets are sent serially to and from
+the flight control board.
+Data is encoded in bytes using the little endian format.
 
-__license__ = "GPL"
-__version__ = "1.6"
-__status__ = "Development"
+Packets consist of
+    Header   (3 bytes)
+    Size     (1 byte)
+    Type     (1 byte)
+    Payload  (size indicated by Size portion of packet)
+    Checksum (1 byte)
 
+Header is composed of 3 characters (bytes):
+    byte 0: '$'
+    byte 1: 'M'
+    byte 2: '<' for data going to the flight control board or
+            '>' for data coming from the flight contorl board
+
+Size is the number of bytes in the Payload
+    Size can range from 0-255
+    0 indicates no payload
+
+Type indicates the type (i.e. meaning) of the message
+    Types values and meanings are mapped with MultiWii class variables
+
+Payload is the packet data
+    Number of bytes must match the value of Size
+    Specific formatting is specific to each Type
+
+Checksum is the XOR of all of the bits in [Size, Type, Payload]
+"""
 import serial, time, struct, subprocess, os
 
 class MultiWii(object):
-    """Multiwii Serial Protocol message ID
-
-    notice: just attitude, rc channels and raw imu, and set raw rc
-    are implemented at the moment
+    """Multiwii Serial Protocol
     """
-    IDENT = 100
-    STATUS = 101
-    RAW_IMU = 102
-    SERVO = 103
-    MOTOR = 104
-    RC = 105
-    RAW_GPS = 106
-    COMP_GPS = 107
-    ATTITUDE = 108
-    ALTITUDE = 109
-    ANALOG = 110
-    RC_TUNING = 111
-    PID = 112
-    BOX = 113
-    MISC = 114
-    MOTOR_PINS = 115
-    BOXNAMES = 116
-    PIDNAMES = 117
-    WP = 118
-    BOXIDS = 119
-    RC_RAW_IMU = 121
-    SET_RAW_RC = 200
-    SET_RAW_GPS = 201
-    SET_PID = 202
-    SET_BOX = 203
-    SET_RC_TUNING = 204
-    ACC_CALIBRATION = 205
-    MAG_CALIBRATION = 206
-    SET_MISC = 207
-    RESET_CONF = 208
-    SET_WP = 209
-    SWITCH_RC_SERIAL = 210
-    IS_SERIAL = 211
-    DEBUG = 254
-
+    MSP_IDENT = 100
+    MSP_STATUS = 101
+    MSP_RAW_IMU = 102
+    MSP_SERVO = 103
+    MSP_MOTOR = 104
+    MSP_RC = 105
+    MSP_RAW_GPS = 106
+    MSP_COMP_GPS = 107
+    MSP_ATTITUDE = 108
+    MSP_ALTITUDE = 109
+    MSP_ANALOG = 110
+    MSP_RC_TUNING = 111
+    MSP_PID = 112
+    MSP_BOX = 113
+    MSP_MISC = 114
+    MSP_MOTOR_PINS = 115
+    MSP_BOXNAMES = 116
+    MSP_PIDNAMES = 117
+    MSP_WP = 118
+    MSP_BOXIDS = 119
+    MSP_RC_RAW_IMU = 121
+    MSP_SET_RAW_RC = 200
+    MSP_SET_RAW_GPS = 201
+    MSP_SET_PID = 202
+    MSP_SET_BOX = 203
+    MSP_SET_RC_TUNING = 204
+    MSP_ACC_CALIBRATION = 205
+    MSP_MAG_CALIBRATION = 206
+    MSP_SET_MISC = 207
+    MSP_RESET_CONF = 208
+    MSP_SET_WP = 209
+    MSP_SWITCH_RC_SERIAL = 210
+    MSP_IS_SERIAL = 211
+    MSP_DEBUG = 254
 
     def __init__(self, serPort):
         self.PIDcoef = {
@@ -87,20 +106,23 @@ class MultiWii(object):
             print(str(error)+"\n\n")
             raise(error)
 
-    def sendCMD(self, data_length, code, data):
-        """Send a command to the board"""
+    def compute_checksum(self, packet):
+        """Computes the MSP checksum"""
         checksum = 0
-        total_data = ['$', 'M', '<', data_length, code] + data
-        packet = (
-            struct.pack('<ccc', b'$', b'M', b'<') +
-            struct.pack('<BB%dH' % len(data), data_length, code, *data))
         if type(packet[0]) is str: # python2 struct.pack returns string
             for i in packet[3:]:
                 checksum ^= ord(i)
         else:                      # python3 struct.pack returns bytes of ints
             for i in packet[3:]:
                 checksum ^= i
-        packet += struct.pack('<B', checksum)
+        return checksum
+
+    def sendCMD(self, data_length, code, data):
+        """Send a command to the board"""
+        packet = (
+            struct.pack('<ccc', b'$', b'M', b'<') +
+            struct.pack('<BB%dH' % len(data), data_length, code, *data))
+        packet += struct.pack('<B', self.compute_checksum(packet))
         try:
             self.ser.write(packet)
         except(Exception) as error:
@@ -114,7 +136,7 @@ class MultiWii(object):
         start = time.time()
         while timer < 0.5:
             data = [1500,1500,2000,1000]
-            self.sendCMD(8, MultiWii.SET_RAW_RC, data)
+            self.sendCMD(8, MultiWii.MSP_SET_RAW_RC, data)
             time.sleep(0.05)
             timer = timer + (time.time() - start)
             start = time.time()
@@ -125,7 +147,7 @@ class MultiWii(object):
         start = time.time()
         while timer < 0.5:
             data = [1500,1500,1000,1000]
-            self.sendCMD(8,MultiWii.SET_RAW_RC,data)
+            self.sendCMD(8,MultiWii.MSP_SET_RAW_RC,data)
             time.sleep(0.05)
             timer = timer + (time.time() - start)
             start = time.time()
@@ -135,8 +157,8 @@ class MultiWii(object):
         for i in np.arange(1,len(pd),2):
             data.append(pd[i]+pd[i+1]*256)
         print("PID sending:", data)
-        self.sendCMD(30, MultiWii.SET_PID, data)
-        self.sendCMD(0, MultiWii.EEPROM_WRITE, [])
+        self.sendCMD(30, MultiWii.MSP_SET_PID, data)
+        self.sendCMD(0, MultiWii.MSP_EEPROM_WRITE, [])
 
     def getData(self, cmd):
         """Function to receive a data packet from the board"""
@@ -149,22 +171,22 @@ class MultiWii(object):
             temp = struct.unpack('<'+'h'*(datalength//2), data)
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
-            if cmd == MultiWii.ATTITUDE:
+            if cmd == MultiWii.MSP_ATTITUDE:
                 self.attitude['angx']=float(temp[0]/10.0)
                 self.attitude['angy']=float(temp[1]/10.0)
                 self.attitude['heading']=float(temp[2])
                 return self.attitude
-            elif cmd == MultiWii.ALTITUDE:
+            elif cmd == MultiWii.MSP_ALTITUDE:
                 self.altitude['estalt']=float(temp[0])
                 self.altitude['vario']=float(temp[1])
                 return self.rcChannels
-            elif cmd == MultiWii.RC:
+            elif cmd == MultiWii.MSP_RC:
                 self.rcChannels['roll']=temp[0]
                 self.rcChannels['pitch']=temp[1]
                 self.rcChannels['yaw']=temp[2]
                 self.rcChannels['throttle']=temp[3]
                 return self.rcChannels
-            elif cmd == MultiWii.RAW_IMU:
+            elif cmd == MultiWii.MSP_RAW_IMU:
                 self.rawIMU['ax']=float(temp[0])
                 self.rawIMU['ay']=float(temp[1])
                 self.rawIMU['az']=float(temp[2])
@@ -175,13 +197,13 @@ class MultiWii(object):
                 self.rawIMU['my']=float(temp[7])
                 self.rawIMU['mz']=float(temp[8])
                 return self.rawIMU
-            elif cmd == MultiWii.MOTOR:
+            elif cmd == MultiWii.MSP_MOTOR:
                 self.motor['m1']=float(temp[0])
                 self.motor['m2']=float(temp[1])
                 self.motor['m3']=float(temp[2])
                 self.motor['m4']=float(temp[3])
                 return self.motor
-            elif cmd == MultiWii.PID:
+            elif cmd == MultiWii.MSP_PID:
                 dataPID=[]
                 if len(temp)>1:
                     d=0
@@ -227,23 +249,23 @@ class MultiWii(object):
                 temp = struct.unpack('<'+'h'*(datalength//2),data)
                 self.ser.reset_input_buffer()
                 self.ser.reset_output_buffer()
-                if cmd == MultiWii.ATTITUDE:
+                if cmd == MultiWii.MSP_ATTITUDE:
                     self.attitude['angx']=float(temp[0]/10.0)
                     self.attitude['angy']=float(temp[1]/10.0)
                     self.attitude['heading']=float(temp[2])
-                elif cmd == MultiWii.RC:
+                elif cmd == MultiWii.MSP_RC:
                     self.rcChannels['roll']=temp[0]
                     self.rcChannels['pitch']=temp[1]
                     self.rcChannels['yaw']=temp[2]
                     self.rcChannels['throttle']=temp[3]
-                elif cmd == MultiWii.RAW_IMU:
+                elif cmd == MultiWii.MSP_RAW_IMU:
                     self.rawIMU['ax']=float(temp[0])
                     self.rawIMU['ay']=float(temp[1])
                     self.rawIMU['az']=float(temp[2])
                     self.rawIMU['gx']=float(temp[3])
                     self.rawIMU['gy']=float(temp[4])
                     self.rawIMU['gz']=float(temp[5])
-                elif cmd == MultiWii.MOTOR:
+                elif cmd == MultiWii.MSP_MOTOR:
                     self.motor['m1']=float(temp[0])
                     self.motor['m2']=float(temp[1])
                     self.motor['m3']=float(temp[2])
