@@ -1,4 +1,4 @@
-from DroneControl import DroneComm
+from dronestorm import DroneComm
 import sys
 import time
 
