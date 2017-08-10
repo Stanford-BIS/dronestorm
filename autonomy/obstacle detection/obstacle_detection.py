@@ -5,7 +5,6 @@ from dronestorm import Reader
 
 host = '127.0.0.1'
 r = redis.StrictRedis(host=host)
-drone = DroneComm()
 
 FRONT_TRIG_ID = 12
 FRONT_ECHO_ID = 16
@@ -23,10 +22,25 @@ THR_CHN = 13
 K_roll  = 4 * 1./180.
 K_pitch = 4 * 1./90.
 
+desired_distance = 100. # cm
+K_front = 0.0004 / 100 # proportion constant
+K_back = -0.0004 / 100
+
+MID_WIDTH = 0.00150
+MAX_DELTA_PWIDTH = 0.0004
+roll_trim = -5
+pitch_trim = 4
+
+drone = DroneComm(roll_pwm_trim=roll_trim, pitch_pwm_trim=pitch_trim)
+
 # Start program by placing drone on a flat surface to ensure accurate
 # calibration Values
-desired_roll = 0.
-desired_pitch = 0.
+drone.update_attitude()
+desired_roll = drone.get_roll()
+desired_pitch = drone.get_pitch()
+
+print("Setting desired roll/pitch...")
+time.sleep(2)
 
 pi = pigpio.pi()
 ro = Reader(pi, ROLL_CHN)
@@ -74,10 +88,7 @@ try:
         front_dist = measureDistance_HCSRO4(FRONT_TRIG_ID, FRONT_ECHO_ID)
         back_dist = measureDistance_HCSRO4(BACK_TRIG_ID, BACK_ECHO_ID)
 
-        desired_distance = 100. # cm
-        K_front = 0.0004 / 100 # proportion constant
-        K_back = -0.0004 / 100
-
+        # user's manual input
         yaw = measurePWM(y)
         pitch = measurePWM(p)
         roll = measurePWM(ro)
@@ -85,37 +96,11 @@ try:
         aux1 = measurePWM(aux)
 
 
-        # if (roll > 0.00149 and roll < 0.00152) or (pitch > 0.00149 and pitch < 0.00152) or (yaw > 0.00149 and yaw < 0.00152):
-        #     # stabilize
-        #
-        #     drone.update_attitude()
-        #
-        #     curr_roll = drone.get_roll()
-        #     curr_pitch = drone.get_pitch()
-        #
-        #     # Error between desired and actual roll/pitch
-        #     error_roll =  desired_roll - curr_roll
-        #     error_pitch = desired_pitch - curr_pitch
-        #
-        #     output_roll = K_roll * error_roll
-        #     output_pitch = K_pitch * error_pitch
-        #
-        #     r.set('a_roll', output_roll)
-        #     r.set('a_pitch', output_pitch)
-        #     r.set('a_yaw', yaw)
-        #     r.set('a_thr', thr)
-        #     r.set('a_aux1', aux1)
-        #
-        # else:
-
         # manual control
-        r.set('a_roll', roll)
-        r.set('a_pitch', pitch)
-        r.set('a_yaw', yaw)
-        r.set('a_thr', thr)
-        r.set('a_aux1', aux1)
+
 
         if (front_dist <= desired_distance) and (back_dist <= desired_distance):
+
             drone.update_attitude()
 
             curr_roll = drone.get_roll()
@@ -125,29 +110,54 @@ try:
             error_roll =  desired_roll - curr_roll
             error_pitch = desired_pitch - curr_pitch
 
-            output_roll = K_roll * error_roll
-            output_pitch = K_pitch * error_pitch
+            output_roll_rate = K_roll * error_roll
+            output_pitch_rate = K_pitch * error_pitch
 
-            r.set('a_roll', output_roll)
-            r.set('a_pitch', output_pitch)
-            r.set('a_yaw', yaw)
-            r.set('a_thr', thr)
-            r.set('a_aux1', aux1)
+            output_pitch = MID_WIDTH + (pitch_trim * 1E-6) + (output_pitch_rate * MAX_DELTA_PWIDTH)
+            output_roll = MID_WIDTH + (roll_trim * 1E-6) + (output_roll_rate * MAX_DELTA_PWIDTH)
+
+            pitch = output_pitch
+            roll = output_roll
+
 
         elif (front_dist <= desired_distance):
             output_pwidth = K_front * front_dist + 0.0011
 
             # set corrective rate
             pitch = output_pwidth
-            r.set('a_pitch', output_pwidth)
 
         elif (back_dist <= desired_distance):
             output_pwidth = K_back * back_dist + 0.0019
 
             # set corrective rate
             pitch = output_pwidth
-            r.set('a_pitch', output_pwidth)
 
+        elif (front_dist > desired_distance) and (back_dist > desired_distance):
+            # stabilize
+
+            drone.update_attitude()
+
+            curr_roll = drone.get_roll()
+            curr_pitch = drone.get_pitch()
+
+            # Error between desired and actual roll/pitch
+            error_roll =  desired_roll - curr_roll
+            error_pitch = desired_pitch - curr_pitch
+
+            output_roll_rate = K_roll * error_roll
+            output_pitch_rate = K_pitch * error_pitch
+
+            output_pitch = MID_WIDTH + (pitch_trim * 1E-6) + (output_pitch_rate * MAX_DELTA_PWIDTH)
+            output_roll = MID_WIDTH + (roll_trim * 1E-6) + (output_roll_rate * MAX_DELTA_PWIDTH)
+
+            pitch = output_pitch
+            roll = output_roll
+
+        r.set('a_roll', roll)
+        r.set('a_pitch', pitch)
+        r.set('a_yaw', yaw)
+        r.set('a_thr', thr)
+        r.set('a_aux1', aux1)
 
 
         acyaw = float(r.get('a_yaw'))
@@ -161,6 +171,8 @@ try:
             (acroll, acpitch, acyaw, acthr, acaux1, front_dist, back_dist))
 
         sys.stdout.flush()
+
+        time.sleep(0.1)
 
 except (KeyboardInterrupt, SystemExit):
     ro.cancel()

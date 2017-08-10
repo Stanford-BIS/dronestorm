@@ -15,6 +15,7 @@ K_pitch = 4 * 1./90.
 
 # Start program by placing drone on a flat surface to ensure accurate
 # calibration Values
+drone.update_attitude()
 desired_roll = drone.get_roll()
 desired_pitch = drone.get_pitch()
 
@@ -23,6 +24,7 @@ print("desired_roll:%f desired_pitch:%f"%(desired_roll, desired_pitch))
 try:
     while (True):
         # Fetching current roll/pitch values
+        drone.update_attitude()
         roll = drone.get_roll()
         pitch = drone.get_pitch()
 
@@ -33,10 +35,10 @@ try:
         output_roll = K_roll * error_roll
         output_pitch = K_pitch * error_pitch
 
-        # sys.stdout.write(
-        #     "roll:%6.1f pitch:%5.1f output_roll:%6.3f output_pitch:%6.3f\r"%
-        #     (roll, pitch, output_roll, output_pitch))
-        # sys.stdout.flush()
+        sys.stdout.write(
+            "roll:%6.1f pitch:%5.1f output_roll:%6.3f output_pitch:%6.3f\r"%
+            (roll, pitch, output_roll, output_pitch))
+        sys.stdout.flush()
 
         # Set corrective rates
         drone.set_pitch_rate(output_pitch)
