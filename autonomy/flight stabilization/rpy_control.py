@@ -1,4 +1,4 @@
-from DroneControl import DroneComm, PID
+from dronestorm import DroneComm, PID
 import sys
 import time
 import redis

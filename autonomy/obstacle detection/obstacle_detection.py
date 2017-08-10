@@ -25,8 +25,8 @@ K_pitch = 4 * 1./90.
 
 # Start program by placing drone on a flat surface to ensure accurate
 # calibration Values
-desired_roll = drone.get_roll()
-desired_pitch = drone.get_pitch()
+desired_roll = 0.
+desired_pitch = 0.
 
 pi = pigpio.pi()
 ro = Reader(pi, ROLL_CHN)
@@ -74,7 +74,7 @@ try:
         front_dist = measureDistance_HCSRO4(FRONT_TRIG_ID, FRONT_ECHO_ID)
         back_dist = measureDistance_HCSRO4(BACK_TRIG_ID, BACK_ECHO_ID)
 
-        desired_distance = 100 # cm
+        desired_distance = 100. # cm
         K_front = 0.0004 / 100 # proportion constant
         K_back = -0.0004 / 100
 
@@ -83,6 +83,30 @@ try:
         roll = measurePWM(ro)
         thr = measurePWM(th)
         aux1 = measurePWM(aux)
+
+
+        # if (roll > 0.00149 and roll < 0.00152) or (pitch > 0.00149 and pitch < 0.00152) or (yaw > 0.00149 and yaw < 0.00152):
+        #     # stabilize
+        #
+        #     drone.update_attitude()
+        #
+        #     curr_roll = drone.get_roll()
+        #     curr_pitch = drone.get_pitch()
+        #
+        #     # Error between desired and actual roll/pitch
+        #     error_roll =  desired_roll - curr_roll
+        #     error_pitch = desired_pitch - curr_pitch
+        #
+        #     output_roll = K_roll * error_roll
+        #     output_pitch = K_pitch * error_pitch
+        #
+        #     r.set('a_roll', output_roll)
+        #     r.set('a_pitch', output_pitch)
+        #     r.set('a_yaw', yaw)
+        #     r.set('a_thr', thr)
+        #     r.set('a_aux1', aux1)
+        #
+        # else:
 
         # manual control
         r.set('a_roll', roll)
@@ -114,13 +138,17 @@ try:
             output_pwidth = K_front * front_dist + 0.0011
 
             # set corrective rate
+            pitch = output_pwidth
             r.set('a_pitch', output_pwidth)
 
         elif (back_dist <= desired_distance):
             output_pwidth = K_back * back_dist + 0.0019
 
             # set corrective rate
+            pitch = output_pwidth
             r.set('a_pitch', output_pwidth)
+
+
 
         acyaw = float(r.get('a_yaw'))
         acpitch = float(r.get('a_pitch'))
@@ -129,14 +157,9 @@ try:
         acaux1 = float(r.get('a_aux1'))
 
         sys.stdout.write(
-            "Front Distance:%6.2f Back Distance:%5.2f\r" %
-            (front_dist, back_dist))
+            "roll:%.5f pitch:%.5f yaw:%.5f thr:%.5f aux1:%.5f Front Distance:%4.2f Back Distance:%4.2f\r"%
+            (acroll, acpitch, acyaw, acthr, acaux1, front_dist, back_dist))
 
-        sys.stdout.write(
-            "roll:%.5f pitch:%.5f yaw:%.5f thr:%.5f aux1:%.5f\r"%
-            (acroll, acpitch, acyaw, acthr, acaux1))
-
-        time.sleep(0.1)
         sys.stdout.flush()
 
 except (KeyboardInterrupt, SystemExit):
