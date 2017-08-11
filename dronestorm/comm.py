@@ -14,7 +14,7 @@ import Adafruit_PCA9685
 import pigpio
 
 # identifiers
-MSP_IDENT = 100
+# MSP_IDENT = 100 # deprecated
 MSP_STATUS = 101
 MSP_RAW_IMU = 102
 MSP_SERVO = 103
@@ -47,17 +47,18 @@ MSP_RESET_CONF = 208
 MSP_SET_WP = 209
 MSP_SWITCH_RC_SERIAL = 210
 MSP_IS_SERIAL = 211
+MSP_SET_MOTOR = 214
 MSP_EEPROM_WRITE = 250
 MSP_DEBUG = 254
 
 # payload byte lengths
 # None means not implemented yet
 MSP_PAYLOAD_LEN = {
-    MSP_IDENT : 7,
-    MSP_STATUS : 11,
+    # MSP_IDENT : 7,
+    MSP_STATUS : 15,
     MSP_RAW_IMU : 18,
     MSP_SERVO : None,
-    MSP_MOTOR : None,
+    MSP_MOTOR : 8,
     MSP_RC : 16,
     MSP_RAW_GPS : 14,
     MSP_COMP_GPS : 5,
@@ -74,7 +75,7 @@ MSP_PAYLOAD_LEN = {
     MSP_WP : 18,
     MSP_BOXIDS : None,
     MSP_RC_RAW_IMU : None,
-    MSP_SET_RAW_RC : 16,
+    MSP_SET_RAW_RC : 12,
     MSP_SET_RAW_GPS : 14,
     MSP_SET_PID : None,
     MSP_SET_BOX : None,
@@ -86,6 +87,7 @@ MSP_PAYLOAD_LEN = {
     MSP_SET_WP : 18,
     MSP_SWITCH_RC_SERIAL : None,
     MSP_IS_SERIAL : None,
+    MSP_SET_MOTOR : 8,
     MSP_EEPROM_WRITE : 0,
     MSP_DEBUG : None
 }
@@ -93,11 +95,11 @@ MSP_PAYLOAD_LEN = {
 # payload format strings
 # None means not implemented yet
 MSP_PAYLOAD_FMT = {
-    MSP_IDENT : '<BBBI',
-    MSP_STATUS : '<HHHIB',
+    # MSP_IDENT : '<BBBI',
+    MSP_STATUS : '<HHHIBHH',
     MSP_RAW_IMU : '<9h',
     MSP_SERVO : None,
-    MSP_MOTOR : None,
+    MSP_MOTOR : '<HHHHHHHH',
     MSP_RC : '<8H',
     MSP_RAW_GPS : '<BBIIHHH',
     MSP_COMP_GPS : None,
@@ -114,7 +116,7 @@ MSP_PAYLOAD_FMT = {
     MSP_WP : '<BIIIHHB',
     MSP_BOXIDS : None,
     MSP_RC_RAW_IMU : None,
-    MSP_SET_RAW_RC : '<8H',
+    MSP_SET_RAW_RC : '<HHHHHH',
     MSP_SET_RAW_GPS : '<BBIIHHH',
     MSP_SET_PID : None,
     MSP_SET_BOX : None,
@@ -126,6 +128,7 @@ MSP_PAYLOAD_FMT = {
     MSP_SET_WP : '<BIIIHHB',
     MSP_SWITCH_RC_SERIAL : None,
     MSP_IS_SERIAL : None,
+    MSP_SET_MOTOR : '<HHHH',
     MSP_EEPROM_WRITE : '',
     MSP_DEBUG : None
 }
@@ -137,7 +140,7 @@ class MultiWii(object):
     the flight control board.
     Data is encoded in bytes using the little endian format.
 
-    Packets consist of
+    Packets consist of:
         Header   (3 bytes)
         Size     (1 byte)
         Type     (1 byte)
@@ -145,38 +148,25 @@ class MultiWii(object):
         Checksum (1 byte)
 
     Header is composed of 3 characters (bytes):
-        byte 0: '$'
-        byte 1: 'M'
-        byte 2: '<' for data going to the flight control board or
-                '>' for data coming from the flight contorl board
+    byte 0: '$'
+    byte 1: 'M'
+    byte 2: '<' for data going to the flight control board or
+            '>' for data coming from the flight contorl board
 
     Size is the number of bytes in the Payload
-        Size can range from 0-255
-        0 indicates no payload
+    Size can range from 0-255
+    0 indicates no payload
 
     Type indicates the type (i.e. meaning) of the message
         Types values and meanings are mapped with MultiWii class variables
 
     Payload is the packet data
-        Number of bytes must match the value of Size
-        Specific formatting is specific to each Type
+    Number of bytes must match the value of Size
+    Specific formatting is specific to each Type
 
     Checksum is the XOR of all of the bits in [Size, Type, Payload]
     """
-    def __init__(self, serPort):
-        self.attitude = {'angx':0, 'angy':0, 'heading':0}
-        self.altitude = {'estalt':0, 'vario':0}
-        self.pid_coef = {
-            'rp':0, 'ri':0, 'rd':0,
-            'pp':0, 'pi':0, 'pd':0,
-            'yp':0, 'yi':0, 'yd':0}
-        self.rc_channels = {'roll':0, 'pitch':0, 'yaw':0, 'throttle':0}
-        self.raw_imu = {
-            'ax':0, 'ay':0, 'az':0,
-            'gx':0, 'gy':0, 'gz':0,
-            'mx':0, 'my':0, 'mz':0}
-        self.motor = {'m1':0, 'm2':0, 'm3':0, 'm4':0}
-
+    def __init__(self, serPort="/dev/ttyUSB0"):
         self.ser = serial.Serial()
         self.ser.port = serPort
         self.ser.baudrate = 115200
@@ -188,15 +178,10 @@ class MultiWii(object):
         self.ser.rtscts = False
         self.ser.dsrdtr = False
         self.ser.writeTimeout = 2
-        try:
-            self.ser.open()
-        except(Exception) as error:
-            print("\n\nError opening port "+self.ser.port +":")
-            print(str(error)+"\n\n")
-            raise error
+        self.open_serial()
 
     @staticmethod
-    def compute_checksum(packet):
+    def _compute_checksum(packet):
         """Computes the MSP checksum
 
         Input
@@ -204,8 +189,12 @@ class MultiWii(object):
         packet: MSP packet without checksum created using struct.pack
         """
         checksum = 0
-        for i in packet[3:].decode():
-            checksum ^= ord(i)
+        if isinstance(packet[0], str):
+            for i in packet[3:]:
+                checksum ^= ord(i)
+        else:
+            for i in packet[3:]:
+                checksum ^= i
         return checksum
 
     def send_msg(self, data_length, msg_type, data, data_format):
@@ -228,7 +217,7 @@ class MultiWii(object):
             struct.pack('<ccc', b'$', b'M', b'<') +
             struct.pack('<BB', data_length, msg_type) +
             struct.pack(data_format, *data))
-        packet += struct.pack('<B', self.compute_checksum(packet))
+        packet += struct.pack('<B', self._compute_checksum(packet))
         try:
             self.ser.write(packet)
         except(Exception) as error:
@@ -279,89 +268,141 @@ class MultiWii(object):
             data decoded from serial stream according to MSP protocol
         """
         try:
+            # send request
             self.send_msg(0, cmd, [], '')
-            header = self.ser.read(5).decode() # [$, M, {<, >}, size, type]
-            datalength = ord(header[3])
-            msg_type = ord(header[4])
+            # get response
+            header = self.ser.read(3).decode() # [$, M, {<, >}]
+            direction = header[2]
+            data_length = self.ser.read(1)
+            msg_type = self.ser.read(1)
+            # handle python 2 vs 3 differences
+            if isinstance(data_length, str):
+                data_length = ord(data_length)
+                msg_type = ord(msg_type)
+            else:
+                data_length = data_length[0]
+                msg_type = msg_type[0]
+            # print(header, data_length, msg_type)
+
             # check that message received matches expected message
-            assert msg_type == cmd, "Unexpected MSP message type detected"
-            buf = self.ser.read(datalength)
+            # assert msg_type == cmd, (
+            #     "Unexpected MSP message type detected. " +
+            #     "Received %d Expected %d"%(msg_type, cmd))
+            assert direction != '!', (
+                "Invalid MSP message direction '!' detected. " +
+                "Indicates invalid request.")
+            # assert direction == '>', (
+            #     "Unexpected MSP message direction. " +
+            #     "Expected '<' but received '>'")
+            buf = self.ser.read(data_length)
             data = struct.unpack(MSP_PAYLOAD_FMT[cmd], buf)
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
         except(Exception) as error:
-            print("\n\nError in getData on port "+self.ser.port)
+            print("\n\nError in get_data on port "+self.ser.port)
             print(str(error)+"\n\n")
             raise error
         return data
 
+    def send_command(self, cmd, data):
+        """Function to send a command to the board
+
+        Inputs
+        ------
+        cmd : int
+            command as defined by the MSP_* identifiers
+        data : list
+            data to be sent with the command; empty list if no data
+        """
+        try:
+            # send command
+            self.send_msg(
+                MSP_PAYLOAD_LEN[cmd], cmd, data, MSP_PAYLOAD_FMT[cmd])
+            # get acknowledgement
+            ack_packet = self.ser.read(6)
+            header = ack_packet[:3].decode() # [$, M, {<, >}, type, crc]
+            direction = header[2]
+            data_length = ack_packet[3]
+            msg_type = ack_packet[4]
+            # handle python 2 vs 3 string vs bytes differences
+            if isinstance(data_length, str):
+                data_length = ord(data_length)
+                msg_type = ord(msg_type)
+            # check that message received matches expected message
+            assert msg_type == cmd, (
+                "Unexpected MSP message type detected. " +
+                "Received %d Expected %d"%(msg_type, cmd))
+            assert direction != '!', (
+                "Invalid MSP message direction '!' detected. " +
+                "Indicates invalid request.")
+            assert direction == '>', (
+                "Unexpected MSP message direction. " +
+                "Expected '<' but received '>'")
+            self.ser.reset_output_buffer()
+            self.ser.reset_input_buffer()
+        except(Exception) as error:
+            print("\n\nError in send_command on port "+self.ser.port)
+            print(str(error)+"\n\n")
+            raise error
+
+    def get_status(self):
+        """Get the flight control board status"""
+        data = self.get_data(MSP_STATUS)
+        cycle_time = data[0]
+        i2c_error_count = data[1]
+        sensor = data[2]
+        flight_mode = data[3]
+        profile = data[4]
+        system_load = data[5]
+        gyro_cycle_time = data[6]
+        return (cycle_time, i2c_error_count, sensor, flight_mode, profile,
+                system_load, gyro_cycle_time)
+
     def get_attitude(self):
         """Get the attitude data"""
         data = self.get_data(MSP_ATTITUDE)
-        self.attitude['angx'] = float(data[0]/10.0)
-        self.attitude['angy'] = float(data[1]/10.0)
-        self.attitude['heading'] = float(data[2])
-        return self.attitude
+        roll = float(data[0]/10.0)
+        pitch = float(data[1]/10.0)
+        yaw = float(data[2])
+        return roll, pitch, yaw
 
     def get_altitute(self):
         """Get the altitude data"""
-        data = self.get_data(MSP_ALTITUDE)
-        self.altitude['estalt'] = float(data[0])
-        self.altitude['vario'] = float(data[1])
-        return self.altitude
+        return self.get_data(MSP_ALTITUDE)
 
     def get_rc(self):
-        """Get the rc data"""
-        data = self.get_data(MSP_RC)
-        self.rc_channels['roll'] = data[0]
-        self.rc_channels['pitch'] = data[1]
-        self.rc_channels['yaw'] = data[2]
-        self.rc_channels['throttle'] = data[3]
-        return self.rc_channels
+        """Get the rc data
+
+        Output
+        -------
+        list of [roll, pitch, yaw, throttlw, aux1, aux2, aux3, aux4]
+        """
+        return self.get_data(MSP_RC)
 
     def get_raw_imu(self):
         """Get the raw imu data"""
-        data = self.get_data(MSP_RAW_IMU)
-        self.raw_imu['ax'] = float(data[0])
-        self.raw_imu['ay'] = float(data[1])
-        self.raw_imu['az'] = float(data[2])
-        self.raw_imu['gx'] = float(data[3])
-        self.raw_imu['gy'] = float(data[4])
-        self.raw_imu['gz'] = float(data[5])
-        self.raw_imu['mx'] = float(data[6])
-        self.raw_imu['my'] = float(data[7])
-        self.raw_imu['mz'] = float(data[8])
-        return self.raw_imu
+        return self.get_data(MSP_RAW_IMU)
 
     def get_motor(self):
         """Get the motor data"""
-        data = self.get_data(MSP_MOTOR)
-        self.motor['m1'] = float(data[0])
-        self.motor['m2'] = float(data[1])
-        self.motor['m3'] = float(data[2])
-        self.motor['m4'] = float(data[3])
-        return self.motor
+        return self.get_data(MSP_MOTOR)
 
-    def get_pid_coeff(self):
-        """Get the PID coefficients"""
-        data = self.get_data(MSP_PID)
-        data_pid = []
-        for data_val in data:
-            data_pid.append(data_val%256)
-            data_pid.append(data_val//256)
-        for idx in [0, 3, 6, 9]:
-            data_pid[idx] = data_pid[idx]/10.0
-            data_pid[idx+1] = data_pid[idx+1]/1000.0
-        self.pid_coef['rp'] = data_pid[0]
-        self.pid_coef['ri'] = data_pid[1]
-        self.pid_coef['rd'] = data_pid[2]
-        self.pid_coef['pp'] = data_pid[3]
-        self.pid_coef['pi'] = data_pid[4]
-        self.pid_coef['pd'] = data_pid[5]
-        self.pid_coef['yp'] = data_pid[6]
-        self.pid_coef['yi'] = data_pid[7]
-        self.pid_coef['yd'] = data_pid[8]
-        return self.pid_coef
+    def set_rc(self, data):
+        """set the rc data"""
+        self.send_command(MSP_SET_RAW_RC, data)
+
+    def set_motor(self, data):
+        """Set the motor outputs"""
+        self.send_command(MSP_SET_MOTOR, data)
+
+    def open_serial(self):
+        """Open the serial port"""
+        try:
+            self.ser.open()
+        except(Exception) as error:
+            print("\n\nError opening port "+self.ser.port +":")
+            print(str(error)+"\n\n")
+            raise error
 
     def close_serial(self):
         """Close the serial port and reset the stty settings"""
@@ -421,14 +462,22 @@ class DroneComm(object):
     def __init__(
             self, pwm_ctrl=True,
             period=0.022, k_period=None,
-            roll_pwm_trim=0, pitch_pwm_trim=0, yaw_pwm_trim=0,
+            roll_trim=0, pitch_trim=0, yaw_trim=0,
             port="/dev/ttyUSB0"):
         self.period = period
 
         # store trims in units of seconds
-        self.roll_pwm_trim = roll_pwm_trim * 1E-6
-        self.pitch_pwm_trim = pitch_pwm_trim * 1E-6
-        self.yaw_pwm_trim = yaw_pwm_trim * 1E-6
+        self.trim = {
+            'roll':roll_trim * 1E-6,
+            'pitch':pitch_trim * 1E-6,
+            'yaw':yaw_trim * 1E-6
+        }
+
+        self.attitude = {'roll':0, 'ptich':0, 'yaw':0}
+        self.imu = {
+            'ax':0, 'ay':0, 'az':0,
+            'droll':0, 'dpitch':0, 'dyaw':0,
+            'mx':0, 'my':0, 'mz':0}
 
         if k_period is None:
             k_period = self.DEFAULT_K_PERIOD
@@ -453,11 +502,11 @@ class DroneComm(object):
         for i in range(6):
             self.set_pwidth(i, self.MID_WIDTH)
         self.set_pwidth(
-            self.ROLL_CHANNEL, self.MID_WIDTH + self.roll_pwm_trim)
+            self.ROLL_CHANNEL, self.MID_WIDTH + self.trim['roll'])
         self.set_pwidth(
-            self.PITCH_CHANNEL, self.MID_WIDTH + self.pitch_pwm_trim)
+            self.PITCH_CHANNEL, self.MID_WIDTH + self.trim['pitch'])
         self.set_pwidth(
-            self.YAW_CHANNEL, self.MID_WIDTH + self.yaw_pwm_trim)
+            self.YAW_CHANNEL, self.MID_WIDTH + self.trim['yaw'])
 
     def set_pwidth(self, channel, width):
         """Set a positive Pulse Width on a channel
@@ -482,7 +531,7 @@ class DroneComm(object):
             positive pulse width (seconds)
         """
         # apply trim offset
-        width += self.roll_pwm_trim
+        width += self.trim['roll']
         width, valid = self.validate_pwidth(width)
         self.set_pwidth(self.ROLL_CHANNEL, width)
         if not valid:
@@ -497,7 +546,7 @@ class DroneComm(object):
             positive pulse width (seconds)
         """
         # apply trim offset
-        width += self.pitch_pwm_trim
+        width += self.trim['pitch']
         width, valid = self.validate_pwidth(width)
         self.set_pwidth(self.PITCH_CHANNEL, width)
         if not valid:
@@ -512,7 +561,7 @@ class DroneComm(object):
             positive pulse width (seconds)
         """
         # apply trim offset
-        width += self.yaw_pwm_trim
+        width += self.trim['yaw']
         width, valid = self.validate_pwidth(width)
         self.set_pwidth(self.YAW_CHANNEL, width)
         if not valid:
@@ -559,7 +608,7 @@ class DroneComm(object):
         """
         rate, valid = self.validate_rate(rate)
         width = (
-            self.MID_WIDTH + self.roll_pwm_trim + rate*self.MAX_DELTA_PWIDTH)
+            self.MID_WIDTH + self.trim['roll'] + rate*self.MAX_DELTA_PWIDTH)
         self.set_pwidth(self.ROLL_CHANNEL, width)
         if not valid:
             print("WARNING: Requested roll rate out of range!")
@@ -574,7 +623,7 @@ class DroneComm(object):
         """
         rate, valid = self.validate_rate(rate)
         width = (
-            self.MID_WIDTH + self.pitch_pwm_trim + rate*self.MAX_DELTA_PWIDTH)
+            self.MID_WIDTH + self.trim['pitch'] + rate*self.MAX_DELTA_PWIDTH)
         self.set_pwidth(self.PITCH_CHANNEL, width)
         if not valid:
             print("WARNING: Requested pitch rate out of range!")
@@ -589,7 +638,7 @@ class DroneComm(object):
         """
         rate, valid = self.validate_rate(rate)
         width = (
-            self.MID_WIDTH + self.yaw_pwm_trim + rate*self.MAX_DELTA_PWIDTH)
+            self.MID_WIDTH + self.trim['yaw'] + rate*self.MAX_DELTA_PWIDTH)
         self.set_pwidth(self.YAW_CHANNEL, width)
         if not valid:
             print("WARNING: Requested yaw rate out of range!")
@@ -610,47 +659,23 @@ class DroneComm(object):
 
     def update_attitude(self):
         """Update the attitude data from the flight controller"""
-        self.board.get_attitude()
+        data = self.board.get_attitude()
+        self.attitude['roll'] = data[0]
+        self.attitude['pitch'] = data[1]
+        self.attitude['yaw'] = data[2]
 
     def update_imu(self):
         """Updates the IMU data from the flight controller"""
-        self.board.get_raw_imu()
-
-    def get_roll(self):
-        """Returns the roll angle"""
-        return self.board.attitude["angx"]
-
-    def get_pitch(self):
-        """Returns the pitch angle"""
-        return self.board.attitude["angy"]
-
-    def get_yaw(self):
-        """Returns the yaw angle"""
-        return self.board.attitude["heading"]
-
-    def get_ax(self):
-        """Returns the x acceleration"""
-        return self.board.raw_imu["ax"]
-
-    def get_ay(self):
-        """Returns the y acceleration"""
-        return self.board.raw_imu["ay"]
-
-    def get_az(self):
-        """Returns the z acceleration"""
-        return self.board.raw_imu["az"]
-
-    def get_droll(self):
-        """Returns the roll angular velocity"""
-        return self.board.raw_imu["gx"]
-
-    def get_dpitch(self):
-        """Returns the pitch angular velocity"""
-        return self.board.raw_imu["gy"]
-
-    def get_dyaw(self):
-        """Returns the yaw angular velocity"""
-        return self.board.raw_imu["gz"]
+        data = self.board.get_raw_imu()
+        self.imu['ax'] = data[0]
+        self.imu['ay'] = data[1]
+        self.imu['az'] = data[2]
+        self.imu['droll'] = data[3]
+        self.imu['dpitch'] = data[4]
+        self.imu['dyaw'] = data[5]
+        self.imu['mx'] = data[6]
+        self.imu['my'] = data[7]
+        self.imu['mz'] = data[8]
 
     def exit(self):
         """
@@ -660,27 +685,6 @@ class DroneComm(object):
             self.reset_channels()
         if self.board is not None:
             self.board.close_serial()
-
-    def control_example(self):
-        """
-        Sets the Roll/Pitch/Yaw on the Naze32 flight controller
-        to maximum then minimum pulse widths
-        """
-        self.reset_channels()
-        time.sleep(1)
-
-        self.set_yaw_pwidth(self.MAX_WIDTH)
-        self.set_pitch_pwidth(self.MAX_WIDTH)
-        self.set_roll_pwidth(self.MAX_WIDTH)
-
-        time.sleep(2)
-
-        self.set_yaw_pwidth(self.MIN_WIDTH)
-        self.set_pitch_pwidth(self.MIN_WIDTH)
-        self.set_roll_pwidth(self.MIN_WIDTH)
-
-        time.sleep(2)
-        self.reset_channels()
 
 class Reader:
     """A class to read PWM pulses and calculate their frequency

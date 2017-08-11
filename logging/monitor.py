@@ -11,16 +11,15 @@ try:
         # Fetching current pitch/roll values
         drone.update_attitude()
         drone.update_imu()
-        roll = drone.get_roll()
-        pitch = drone.get_pitch()
-        yaw = drone.get_yaw()
-        droll = drone.get_droll()
-        dpitch = drone.get_dpitch()
-        dyaw = drone.get_dyaw()
-
-        ax = drone.get_ax()
-        ay = drone.get_ay()
-        az = drone.get_az()
+        roll = drone.attitude['roll']
+        pitch = drone.attitude['pitch']
+        yaw = drone.attitude['yaw']
+        droll = drone.imu['droll']
+        dpitch = drone.imu['dpitch']
+        dyaw = drone.imu['dyaw']
+        ax = drone.imu['ax']
+        ay = drone.imu['ay']
+        az = drone.imu['az']
 
         sys.stdout.write(
             "%6.1f  %5.0f | "%(roll, droll) +
