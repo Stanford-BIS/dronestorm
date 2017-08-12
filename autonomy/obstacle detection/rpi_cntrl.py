@@ -5,7 +5,7 @@ from dronestorm import DroneComm
 
 host = '127.0.0.1'
 r = redis.StrictRedis(host=host)
-drone = DroneComm()
+drone = DroneComm(port=None)
 
 MID_WIDTH = 0.0015
 
