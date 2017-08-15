@@ -65,16 +65,17 @@ def measureDistance_HCSRO4(TRIG_ID, ECHO_ID):
     time.sleep(0.00001)
     GPIO.output(TRIG_ID, False)
 
-    edge_detect = GPIO.wait_for_edge(ECHO_ID, GPIO.RISING, timeout=100)
+    edge_detect = GPIO.wait_for_edge(ECHO_ID, GPIO.RISING, timeout = 100)
+
     if edge_detect is not None:
         pulse_start = time.time()
-    else:
-        continue
-    edge_detect = GPIO.wait_for_edge(ECHO_ID, GPIO.FALLING, timeout=100)
+    else: return
+
+    edge_detect = GPIO.wait_for_edge(ECHO_ID, GPIO.FALLING, timeout = 100)
+
     if edge_detect is not None:
         pulse_end = time.time()
-    else:
-        continue
+    else: return
 
     pulse_duration = pulse_end - pulse_start
     distance = round(pulse_duration * 17150, 2)
