@@ -22,10 +22,12 @@ K_back = -0.0004 / 100
 
 MID_WIDTH = 0.00150
 MIN_WIDTH = 0.00110
+MAX_WIDTH = 0.00190
+
 MAX_DELTA_PWIDTH = 0.0004
 roll_trim =  0
 pitch_trim = 0
-HOVER_ALTITUDE = 100
+HOVER_ALTITUDE = 25
 
 drone = DroneComm(roll_trim=roll_trim, pitch_trim=pitch_trim)
 
@@ -77,19 +79,25 @@ def measurePWM(pigpio_pulse):
 
 try:
     prev_thr = 0.0011
+    in_air = False
+    thr = MIN_WIDTH
     
     while (True):
 
-        in_air = False
-        thr = measurePWM(th)
+        usr_thr = measurePWM(th)
+        aux1 = measurePWM(aux)
 
-        if thr > MIN_WIDTH and not in_air:
+        if usr_thr > MIN_WIDTH and not in_air:
             # takeoff sequence
             curr_alt = getDistMaxSonar()
             in_air = True
 
-            while (curr_alt <= HOVER_ALTITUDE):
-                thr += 0.00025
+            while (curr_alt < HOVER_ALTITUDE) or (curr_alt == 255):
+                thr += 0.000001
+
+                if thr >= MAX_WIDTH:
+                    thr = MAX_WIDTH
+                    break;
 
                 # user's manual input
                 yaw = measurePWM(y)
@@ -117,15 +125,26 @@ try:
                 r.set('a_thr', thr)
                 r.set('a_aux1', aux1)
 
-        elif thr < MIN_WIDTH and in_air:
+                curr_alt = getDistMaxSonar()
+
+                sys.stdout.write("roll:%.5f pitch:%.5f yaw:%.5f thr:%.5f aux1:%.5f Altitude:%4.2f\r"%
+                (roll, pitch, yaw, thr, aux1, curr_alt))
+                sys.stdout.flush()
+                time.sleep(0.01)
+
+        elif usr_thr < MIN_WIDTH and in_air:
             # landing sequence
 
             curr_alt = getDistMaxSonar()
             in_air = False
-            prev_thr = 0.00150
+            print(prev_thr)
 
-            while (curr_alt >= 20):
-                thr -= 0.00025
+            while (curr_alt >= 20) or (curr_alt == 255):
+                prev_thr -= 0.000001
+
+                if prev_thr <= MIN_WIDTH:
+                    prev_thr = MIN_WIDTH
+                    break
 
                 # user's manual input
                 yaw = measurePWM(y)
@@ -147,64 +166,33 @@ try:
                 pitch = MID_WIDTH + (pitch_trim * 1E-6) + (output_pitch_rate * MAX_DELTA_PWIDTH)
                 roll = MID_WIDTH + (roll_trim * 1E-6) + (output_roll_rate * MAX_DELTA_PWIDTH)
 
-                prev_thr = thr
 
                 r.set('a_roll', roll)
                 r.set('a_pitch', pitch)
                 r.set('a_yaw', yaw)
-                r.set('a_thr', thr)
+                r.set('a_thr', prev_thr)
                 r.set('a_aux1', aux1)
 
-        elif in_air:
-            # stabilized altitude lock
+                curr_alt = getDistMaxSonar()
 
-            yaw = measurePWM(y)
-            pitch = measurePWM(p)
-            roll = measurePWM(ro)
-            thr = measurePWM(th)
-            usr_thr = thr
-            aux1 = measurePWM(aux)
-
-            # calculates stable values
-            drone.update_attitude()
-            curr_roll = drone.attitude['roll']
-            curr_pitch = drone.attitude['pitch']
-
-            # Error between desired and actual roll/pitch
-            error_roll =  desired_roll - curr_roll
-            error_pitch = desired_pitch - curr_pitch
-            output_roll_rate = K_roll * error_roll
-            output_pitch_rate = K_pitch * error_pitch
-
-            pitch = MID_WIDTH + (pitch_trim * 1E-6) + (output_pitch_rate * MAX_DELTA_PWIDTH)
-            roll = MID_WIDTH + (roll_trim * 1E-6) + (output_roll_rate * MAX_DELTA_PWIDTH)
-
-            if prev_thr == thr and not auto:
-                auto = True
-                curr_height = getDistMaxSonar()
-                thr = ((0.0004 / (700 - curr_height)) * (curr_height - 700)) + 0.00190
-                prev_thr = usr_thr
-            else:
-                auto = False
-                prev_thr = thr
-       
-        else:
-            yaw = measurePWM(y)
-            pitch = measurePWM(p)
-            roll = measurePWM(ro)
-            thr = measurePWM(th)
-            aux1 = measurePWM(aux)
+                sys.stdout.write("roll:%.5f pitch:%.5f yaw:%.5f thr:%.5f aux1:%.5f Altitude:%4.2f\r"%
+                (roll, pitch, yaw, prev_thr, aux1, curr_alt))
+                sys.stdout.flush()
+                time.sleep(0.01)
             
         curr_height = getDistMaxSonar()
-        r.set('a_roll', roll)
-        r.set('a_pitch', pitch)
-        r.set('a_yaw', yaw)
+
+        r.set('a_roll', MID_WIDTH)
+        r.set('a_pitch', MID_WIDTH)
+        r.set('a_yaw', MID_WIDTH)
         r.set('a_thr', thr)
         r.set('a_aux1', aux1)
 
+        prev_thr = thr
+
         sys.stdout.write(
             "roll:%.5f pitch:%.5f yaw:%.5f thr:%.5f aux1:%.5f Altitude:%4.2f\r"%
-            (roll, pitch, yaw, thr, aux1, curr_height))
+            (MID_WIDTH, MID_WIDTH, MID_WIDTH, thr, aux1, curr_height))
 
         sys.stdout.flush()
         time.sleep(0.01)
@@ -216,5 +204,3 @@ except (KeyboardInterrupt, SystemExit):
     aux.cancel()
     th.cancel()
     pi.stop()
-    pi.i2c_close(h)
-    GPIO.cleanup()
