@@ -187,7 +187,14 @@ try:
             else:
                 auto = False
                 prev_thr = thr
-
+       
+        else:
+            yaw = measurePWM(y)
+            pitch = measurePWM(p)
+            roll = measurePWM(ro)
+            thr = measurePWM(th)
+            aux1 = measurePWM(aux)
+            
         curr_height = getDistMaxSonar()
         r.set('a_roll', roll)
         r.set('a_pitch', pitch)
