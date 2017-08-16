@@ -12,126 +12,7 @@ import os
 import serial
 import Adafruit_PCA9685
 import pigpio
-
-# identifiers
-# MSP_IDENT = 100 # deprecated
-MSP_STATUS = 101
-MSP_RAW_IMU = 102
-MSP_SERVO = 103
-MSP_MOTOR = 104
-MSP_RC = 105
-MSP_RAW_GPS = 106
-MSP_COMP_GPS = 107
-MSP_ATTITUDE = 108
-MSP_ALTITUDE = 109
-MSP_ANALOG = 110
-MSP_RC_TUNING = 111
-MSP_PID = 112
-MSP_BOX = 113
-MSP_MISC = 114
-MSP_MOTOR_PINS = 115
-MSP_BOXNAMES = 116
-MSP_PIDNAMES = 117
-MSP_WP = 118
-MSP_BOXIDS = 119
-MSP_RC_RAW_IMU = 121
-MSP_SET_RAW_RC = 200
-MSP_SET_RAW_GPS = 201
-MSP_SET_PID = 202
-MSP_SET_BOX = 203
-MSP_SET_RC_TUNING = 204
-MSP_ACC_CALIBRATION = 205
-MSP_MAG_CALIBRATION = 206
-MSP_SET_MISC = 207
-MSP_RESET_CONF = 208
-MSP_SET_WP = 209
-MSP_SWITCH_RC_SERIAL = 210
-MSP_IS_SERIAL = 211
-MSP_SET_MOTOR = 214
-MSP_EEPROM_WRITE = 250
-MSP_DEBUG = 254
-
-# payload byte lengths
-# None means not implemented yet
-MSP_PAYLOAD_LEN = {
-    # MSP_IDENT : 7,
-    MSP_STATUS : 15,
-    MSP_RAW_IMU : 18,
-    MSP_SERVO : None,
-    MSP_MOTOR : 8,
-    MSP_RC : 16,
-    MSP_RAW_GPS : 14,
-    MSP_COMP_GPS : 5,
-    MSP_ATTITUDE : 6,
-    MSP_ALTITUDE : 6,
-    MSP_ANALOG : 7,
-    MSP_RC_TUNING : 7,
-    MSP_PID : None,
-    MSP_BOX : None,
-    MSP_MISC : None,
-    MSP_MOTOR_PINS : None,
-    MSP_BOXNAMES : None,
-    MSP_PIDNAMES : None,
-    MSP_WP : 18,
-    MSP_BOXIDS : None,
-    MSP_RC_RAW_IMU : None,
-    MSP_SET_RAW_RC : 12,
-    MSP_SET_RAW_GPS : 14,
-    MSP_SET_PID : None,
-    MSP_SET_BOX : None,
-    MSP_SET_RC_TUNING : 7,
-    MSP_ACC_CALIBRATION : 0,
-    MSP_MAG_CALIBRATION : 0,
-    MSP_SET_MISC : None,
-    MSP_RESET_CONF : 0,
-    MSP_SET_WP : 18,
-    MSP_SWITCH_RC_SERIAL : None,
-    MSP_IS_SERIAL : None,
-    MSP_SET_MOTOR : 8,
-    MSP_EEPROM_WRITE : 0,
-    MSP_DEBUG : None
-}
-
-# payload format strings
-# None means not implemented yet
-MSP_PAYLOAD_FMT = {
-    # MSP_IDENT : '<BBBI',
-    MSP_STATUS : '<HHHIBHH',
-    MSP_RAW_IMU : '<9h',
-    MSP_SERVO : None,
-    MSP_MOTOR : '<HHHHHHHH',
-    MSP_RC : '<8H',
-    MSP_RAW_GPS : '<BBIIHHH',
-    MSP_COMP_GPS : None,
-    MSP_ATTITUDE : '<3h',
-    MSP_ALTITUDE : '<ih',
-    MSP_ANALOG : '<BHHH',
-    MSP_RC_TUNING : '<BBBBBBB',
-    MSP_PID : None,
-    MSP_BOX : None,
-    MSP_MISC : None,
-    MSP_MOTOR_PINS : None,
-    MSP_BOXNAMES : None,
-    MSP_PIDNAMES : None,
-    MSP_WP : '<BIIIHHB',
-    MSP_BOXIDS : None,
-    MSP_RC_RAW_IMU : None,
-    MSP_SET_RAW_RC : '<HHHHHH',
-    MSP_SET_RAW_GPS : '<BBIIHHH',
-    MSP_SET_PID : None,
-    MSP_SET_BOX : None,
-    MSP_SET_RC_TUNING : '<BBBBBBB',
-    MSP_ACC_CALIBRATION : '',
-    MSP_MAG_CALIBRATION : '',
-    MSP_SET_MISC : None,
-    MSP_RESET_CONF : '',
-    MSP_SET_WP : '<BIIIHHB',
-    MSP_SWITCH_RC_SERIAL : None,
-    MSP_IS_SERIAL : None,
-    MSP_SET_MOTOR : '<HHHH',
-    MSP_EEPROM_WRITE : '',
-    MSP_DEBUG : None
-}
+from dronestorm import msp_types as msp
 
 class MultiWii(object):
     """Handle Multiwii Serial Protocol
@@ -232,8 +113,8 @@ class MultiWii(object):
         while timer < 0.5:
             data = [1500, 1500, 2000, 1000]
             self.send_msg(
-                8, MSP_SET_RAW_RC, data,
-                MSP_PAYLOAD_FMT[MSP_SET_RAW_RC])
+                8, msp.MSP_SET_RAW_RC, data,
+                msp.MSP_PAYLOAD_FMT[msp.MSP_SET_RAW_RC])
             time.sleep(0.05)
             timer = timer + (time.time() - start)
             start = time.time()
@@ -245,7 +126,7 @@ class MultiWii(object):
         while timer < 0.5:
             data = [1500, 1500, 1000, 1000]
             self.send_msg(
-                8, MSP_SET_RAW_RC, data, MSP_PAYLOAD_FMT[MSP_SET_RAW_RC])
+                8, msp.MSP_SET_RAW_RC, data, msp.MSP_PAYLOAD_FMT[msp.MSP_SET_RAW_RC])
             time.sleep(0.05)
             timer = timer + (time.time() - start)
             start = time.time()
@@ -282,20 +163,20 @@ class MultiWii(object):
             else:
                 data_length = data_length[0]
                 msg_type = msg_type[0]
-            # print(header, data_length, msg_type)
 
+            print(data_length)
             # check that message received matches expected message
-            # assert msg_type == cmd, (
-            #     "Unexpected MSP message type detected. " +
-            #     "Received %d Expected %d"%(msg_type, cmd))
+            assert msg_type == cmd, (
+                "Unexpected MSP message type detected. " +
+                "Received %d Expected %d"%(msg_type, cmd))
             assert direction != '!', (
                 "Invalid MSP message direction '!' detected. " +
                 "Indicates invalid request.")
-            # assert direction == '>', (
-            #     "Unexpected MSP message direction. " +
-            #     "Expected '<' but received '>'")
+            assert direction == '>', (
+                "Unexpected MSP message direction. " +
+                "Expected '<' but received '>'")
             buf = self.ser.read(data_length)
-            data = struct.unpack(MSP_PAYLOAD_FMT[cmd], buf)
+            data = struct.unpack(msp.MSP_PAYLOAD_FMT[cmd], buf)
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
         except(Exception) as error:
@@ -317,7 +198,7 @@ class MultiWii(object):
         try:
             # send command
             self.send_msg(
-                MSP_PAYLOAD_LEN[cmd], cmd, data, MSP_PAYLOAD_FMT[cmd])
+                msp.MSP_PAYLOAD_LEN[cmd], cmd, data, msp.MSP_PAYLOAD_FMT[cmd])
             # get acknowledgement
             ack_packet = self.ser.read(6)
             header = ack_packet[:3].decode() # [$, M, {<, >}, type, crc]
@@ -347,7 +228,7 @@ class MultiWii(object):
 
     def get_status(self):
         """Get the flight control board status"""
-        data = self.get_data(MSP_STATUS)
+        data = self.get_data(msp.MSP_STATUS)
         cycle_time = data[0]
         i2c_error_count = data[1]
         sensor = data[2]
@@ -360,7 +241,7 @@ class MultiWii(object):
 
     def get_attitude(self):
         """Get the attitude data"""
-        data = self.get_data(MSP_ATTITUDE)
+        data = self.get_data(msp.MSP_ATTITUDE)
         roll = float(data[0]/10.0)
         pitch = float(data[1]/10.0)
         yaw = float(data[2])
@@ -368,7 +249,7 @@ class MultiWii(object):
 
     def get_altitute(self):
         """Get the altitude data"""
-        return self.get_data(MSP_ALTITUDE)
+        return self.get_data(msp.MSP_ALTITUDE)
 
     def get_rc(self):
         """Get the rc data
@@ -377,23 +258,23 @@ class MultiWii(object):
         -------
         list of [roll, pitch, yaw, throttlw, aux1, aux2, aux3, aux4]
         """
-        return self.get_data(MSP_RC)
+        return self.get_data(msp.MSP_RC)
 
     def get_raw_imu(self):
         """Get the raw imu data"""
-        return self.get_data(MSP_RAW_IMU)
+        return self.get_data(msp.MSP_RAW_IMU)
 
     def get_motor(self):
         """Get the motor data"""
-        return self.get_data(MSP_MOTOR)
+        return self.get_data(msp.MSP_MOTOR)
 
     def set_rc(self, data):
         """set the rc data"""
-        self.send_command(MSP_SET_RAW_RC, data)
+        self.send_command(msp.MSP_SET_RAW_RC, data)
 
     def set_motor(self, data):
         """Set the motor outputs"""
-        self.send_command(MSP_SET_MOTOR, data)
+        self.send_command(msp.MSP_SET_MOTOR, data)
 
     def open_serial(self):
         """Open the serial port"""
