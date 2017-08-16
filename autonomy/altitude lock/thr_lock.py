@@ -116,7 +116,7 @@ try:
                 r.set('a_thr', thr)
                 r.set('a_aux1', aux1)
 
-        elif thr < MIN_WIDTH and in_air
+        elif thr < MIN_WIDTH and in_air:
             # landing sequence
 
             curr_alt = getDistMaxSonar()
@@ -154,38 +154,38 @@ try:
                 r.set('a_thr', thr)
                 r.set('a_aux1', aux1)
 
-            elif in_air:
-                # stabilized altitude lock
+        elif in_air:
+            # stabilized altitude lock
 
-                yaw = measurePWM(y)
-                pitch = measurePWM(p)
-                roll = measurePWM(ro)
-                thr = measurePWM(th)
-                usr_thr = thr
-                aux1 = measurePWM(aux)
+            yaw = measurePWM(y)
+            pitch = measurePWM(p)
+            roll = measurePWM(ro)
+            thr = measurePWM(th)
+            usr_thr = thr
+            aux1 = measurePWM(aux)
 
-                # calculates stable values
-                drone.update_attitude()
-                curr_roll = drone.attitude['roll']
-                curr_pitch = drone.attitude['pitch']
+            # calculates stable values
+            drone.update_attitude()
+            curr_roll = drone.attitude['roll']
+            curr_pitch = drone.attitude['pitch']
 
-                # Error between desired and actual roll/pitch
-                error_roll =  desired_roll - curr_roll
-                error_pitch = desired_pitch - curr_pitch
-                output_roll_rate = K_roll * error_roll
-                output_pitch_rate = K_pitch * error_pitch
+            # Error between desired and actual roll/pitch
+            error_roll =  desired_roll - curr_roll
+            error_pitch = desired_pitch - curr_pitch
+            output_roll_rate = K_roll * error_roll
+            output_pitch_rate = K_pitch * error_pitch
 
-                pitch = MID_WIDTH + (pitch_trim * 1E-6) + (output_pitch_rate * MAX_DELTA_PWIDTH)
-                roll = MID_WIDTH + (roll_trim * 1E-6) + (output_roll_rate * MAX_DELTA_PWIDTH)
+            pitch = MID_WIDTH + (pitch_trim * 1E-6) + (output_pitch_rate * MAX_DELTA_PWIDTH)
+            roll = MID_WIDTH + (roll_trim * 1E-6) + (output_roll_rate * MAX_DELTA_PWIDTH)
 
-                if prev_thr == thr and not auto:
-                    auto = True
-                    curr_height = getDistMaxSonar()
-                    thr = ((0.0004 / (700 - curr_height)) * (curr_height - 700)) + 0.00190
-                    prev_thr = usr_thr
-                else:
-                    auto = False
-                    prev_thr = thr
+            if prev_thr == thr and not auto:
+                auto = True
+                curr_height = getDistMaxSonar()
+                thr = ((0.0004 / (700 - curr_height)) * (curr_height - 700)) + 0.00190
+                prev_thr = usr_thr
+            else:
+                auto = False
+                prev_thr = thr
 
         curr_height = getDistMaxSonar()
         r.set('a_roll', roll)
