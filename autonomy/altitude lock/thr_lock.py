@@ -77,10 +77,11 @@ def measurePWM(pigpio_pulse):
 
 try:
     prev_thr = 0.0011
-
+    
     while (True):
 
         in_air = False
+        thr = measurePWM(th)
 
         if thr > MIN_WIDTH and not in_air:
             # takeoff sequence
