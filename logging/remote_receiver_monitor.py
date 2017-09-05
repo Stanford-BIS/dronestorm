@@ -4,6 +4,7 @@ Assumes the packets follow the Remote Receiver format
 """
 import serial
 import time
+import sys
 
 def align_serial(ser):
     """Aligns the serial stream with the incoming Spektrum packets
@@ -72,6 +73,7 @@ def parse_channel_data(data):
         ((ord(data[0]) & MASK_SERVO_POS_HIGH) << 8) | ord(data[1]))
     return ch_id, ch_data
 
+print("Throttle     Roll    Pitch      Yaw     AUX1     AUX2")
 ser = serial.Serial(
     port="/dev/serial0", baudrate=115200,
     bytesize=serial.EIGHTBITS,
@@ -87,8 +89,10 @@ try:
         for i in range(7):
             ch_id, s_pos = parse_channel_data(data[2*i:2*i+2])
             servo_position[ch_id] = s_pos
-        print(servo_position[:13])
-        print
+        sys.stdout.write(
+            "    %4d     %4d     %4d     %4d     %4d     %4d\r"%tuple(
+            servo_position[:6]))
+        sys.stdout.flush()
 except(KeyboardInterrupt, SystemExit):
     ser.close()
 except(Exception) as ex:
