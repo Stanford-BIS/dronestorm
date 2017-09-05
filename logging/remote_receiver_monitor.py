@@ -1,6 +1,8 @@
 """Monitors the UART port on a Raspberry Pi 3 for Spektrum serial packets
 
 Assumes the packets follow the Remote Receiver format
+Forwards the packets on the TX pin of the serial port, so you can pass the
+packets on the the flight control board
 """
 import serial
 import time
@@ -85,7 +87,8 @@ servo_position = [0 for i in range(N_CHAN)]
 try:
     align_serial(ser)
     while True:
-        data = ser.read(16)[2:]
+        data_buf = ser.read(16)
+        data = data_buf[2:]
         for i in range(7):
             ch_id, s_pos = parse_channel_data(data[2*i:2*i+2])
             servo_position[ch_id] = s_pos
@@ -93,6 +96,7 @@ try:
             "    %4d     %4d     %4d     %4d     %4d     %4d\r"%tuple(
             servo_position[:6]))
         sys.stdout.flush()
+        ser.write(data_buf)
 except(KeyboardInterrupt, SystemExit):
     ser.close()
 except(Exception) as ex:
