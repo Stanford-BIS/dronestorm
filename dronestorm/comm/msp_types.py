@@ -1,3 +1,4 @@
+MSP_RX_CONFIG = 44
 MSP_STATUS = 101
 MSP_RAW_IMU = 102
 MSP_SERVO = 103
@@ -37,6 +38,7 @@ MSP_DEBUG = 254
 # payload byte lengths
 # None means not implemented yet
 MSP_PAYLOAD_LEN = {
+    MSP_RX_CONFIG : 23,
     # MSP_IDENT : 7,
     MSP_STATUS : 15,
     MSP_RAW_IMU : 18,
@@ -78,12 +80,13 @@ MSP_PAYLOAD_LEN = {
 # payload format strings
 # None means not implemented yet
 MSP_PAYLOAD_FMT = {
+    MSP_RX_CONFIG : '<BHHHBHHBBHBIBB',
     # MSP_IDENT : '<BBBI',
     MSP_STATUS : '<HHHIBHH',
     MSP_RAW_IMU : '<9h',
     MSP_SERVO : None,
     MSP_MOTOR : '<HHHHHHHH',
-    MSP_RC : '<12H',
+    MSP_RC : '<18H',
     MSP_RAW_GPS : '<BBIIHHH',
     MSP_COMP_GPS : None,
     MSP_ATTITUDE : '<3h',
@@ -99,7 +102,7 @@ MSP_PAYLOAD_FMT = {
     MSP_WP : '<BIIIHHB',
     MSP_BOXIDS : None,
     MSP_RC_RAW_IMU : None,
-    MSP_SET_RAW_RC : '<HHHHHH',
+    MSP_SET_RAW_RC : '<18H',
     MSP_SET_RAW_GPS : '<BBIIHHH',
     MSP_SET_PID : None,
     MSP_SET_BOX : None,
