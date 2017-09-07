@@ -1,4 +1,3 @@
-from .drone_comm import DroneComm
 from .msp import (
     MultiWii,
     msp_get_rx_config, msp_arm, msp_disarm,

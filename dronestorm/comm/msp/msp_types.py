@@ -44,7 +44,14 @@ MSP_PAYLOAD_LEN = {
     MSP_RAW_IMU : 18,
     MSP_SERVO : None,
     MSP_MOTOR : 8,
-    MSP_RC : 24,
+    MSP_RC : {
+        # RC data lengths vary with the receiver protocol used by the
+        # flight control board
+        "PWM" : 16,
+        "PPM" : 24,
+        "SPEKTRUM2048" : 24,
+        "MSP" : 36,
+    }, 
     MSP_RAW_GPS : 14,
     MSP_COMP_GPS : 5,
     MSP_ATTITUDE : 6,
@@ -87,6 +94,15 @@ MSP_PAYLOAD_FMT = {
     MSP_SERVO : None,
     MSP_MOTOR : '<HHHHHHHH',
     MSP_RC : '<18H',
+    MSP_RC : {
+        # RC data lengths vary with the receiver protocol used by the
+        # flight control board
+        "PWM" : '<'+str(MSP_PAYLOAD_LEN[MSP_RC]["PWM"]//2)+'H',
+        "PPM" : '<'+str(MSP_PAYLOAD_LEN[MSP_RC]["PPM"]//2)+'H',
+        "SPEKTRUM2048" : '<'+str(
+            MSP_PAYLOAD_LEN[MSP_RC]["SPEKTRUM2048"]//2)+'H',
+        "MSP" : '<'+str(MSP_PAYLOAD_LEN[MSP_RC]["MSP"]//2)+'H',
+    }, 
     MSP_RAW_GPS : '<BBIIHHH',
     MSP_COMP_GPS : None,
     MSP_ATTITUDE : '<3h',

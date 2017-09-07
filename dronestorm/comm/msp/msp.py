@@ -11,6 +11,7 @@ import struct
 import os
 import serial
 from . import msp_types as msp
+from .msp_types import MSP_PAYLOAD_LEN, MSP_PAYLOAD_FMT
 
 class MultiWii(object):
     """Handle Multiwii Serial Protocol
@@ -85,7 +86,6 @@ class MultiWii(object):
             length, in bytes, of the payload data
         msg_type: int
             message type identifier
-            specified as one of the class variables
         data: list of data items
             data list contents specific to the message type
         data_format: string
@@ -104,42 +104,24 @@ class MultiWii(object):
             print(str(error) + "\n\n")
             raise error
 
-    def arm(self):
-        """Arms the motors"""
-        timer = 0
-        start = time.time()
-        while timer < 0.5:
-            data = [1500, 1500, 2000, 1000]
-            self.send_msg(
-                8, msp.MSP_SET_RAW_RC, data,
-                msp.MSP_PAYLOAD_FMT[msp.MSP_SET_RAW_RC])
-            time.sleep(0.05)
-            timer = timer + (time.time() - start)
-            start = time.time()
-
-    def disarm(self):
-        """Disarms the motors"""
-        timer = 0
-        start = time.time()
-        while timer < 0.5:
-            data = [1500, 1500, 1000, 1000]
-            self.send_msg(
-                8, msp.MSP_SET_RAW_RC, data, msp.MSP_PAYLOAD_FMT[msp.MSP_SET_RAW_RC])
-            time.sleep(0.05)
-            timer = timer + (time.time() - start)
-            start = time.time()
-
-    def set_pid(self, pid_coeff):
-        """Set the PID coefficients"""
-        raise NotImplementedError
-
-    def get_data(self, cmd):
+    def get_data(self, cmd, data_len, fmt):
         """Function to request and receive a data packet from the board
+
+        Checks that the received datapacket matches the request type and
+        expected payload length. Does not have means to check that the payload
+        format is as expected.
 
         Inputs
         ------
         cmd : int
-            command as defined by the MSP_* identifiers
+            command as defined by one of the MSP_* identifiers in the
+            msp_types module
+        data_len : int
+            data length as defined by one of the entries in MSP_PAYLOAD_LEN
+            in the msp_types module
+        fmt : string
+            payload unpacking format string as defined by one of the entries
+            in MSP_PAYLOAD_FMT in the msp_types module
 
         Outputs
         -------
@@ -152,17 +134,16 @@ class MultiWii(object):
             # get response
             header = self.ser.read(3).decode() # [$, M, {<, >}]
             direction = header[2]
-            data_length = self.ser.read(1)
+            packet_data_len = self.ser.read(1)
             msg_type = self.ser.read(1)
             # handle python 2 vs 3 differences
-            if isinstance(data_length, str):
-                data_length = ord(data_length)
+            if isinstance(packet_data_len, str):
+                packet_data_len = ord(packet_data_len)
                 msg_type = ord(msg_type)
             else:
-                data_length = data_length[0]
+                packet_data_len = packet_data_len[0]
                 msg_type = msg_type[0]
 
-            print(data_length)
             # check that message received matches expected message
             assert msg_type == cmd, (
                 "Unexpected MSP message type detected. " +
@@ -173,8 +154,11 @@ class MultiWii(object):
             assert direction == '>', (
                 "Unexpected MSP message direction. " +
                 "Expected '<' but received '>'")
-            buf = self.ser.read(data_length)
-            data = struct.unpack(msp.MSP_PAYLOAD_FMT[cmd], buf)
+            assert packet_data_len == data_len, (
+                "Unexpected MSP payload length. " +
+                "Expected %d but received %d"%(data_len, packet_data_len))
+            buf = self.ser.read(data_len)
+            data = struct.unpack(fmt, buf)
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
         except(Exception) as error:
@@ -185,7 +169,7 @@ class MultiWii(object):
             raise error
         return data
 
-    def send_command(self, cmd, data):
+    def send_command(self, cmd, data_len, fmt, data):
         """Function to send a command to the board
 
         Inputs
@@ -198,7 +182,7 @@ class MultiWii(object):
         try:
             # send command
             self.send_msg(
-                msp.MSP_PAYLOAD_LEN[cmd], cmd, data, msp.MSP_PAYLOAD_FMT[cmd])
+                MSP_PAYLOAD_LEN[cmd], cmd, data, MSP_PAYLOAD_FMT[cmd])
             # get acknowledgement
             ack_packet = self.ser.read(6)
             header = ack_packet[:3].decode() # [$, M, {<, >}, type, crc]
@@ -228,78 +212,6 @@ class MultiWii(object):
             self.ser.reset_output_buffer()
             raise error
 
-    def get_rx_config(self):
-        """Get the flight control board receiver configuration"""
-        data = self.get_data(msp.MSP_RX_CONFIG)
-        ret = {
-            "serialrx_provider" : data[0],
-            "maxcheck" : data[1],
-            "midrc": data[2],
-            "mincheck" : data[3],
-            "spektrum_sat_bind" : data[4],
-            "rx_min_usec" : data[5],
-            "rx_max_usec" : data[6],
-            "rcInterpolation" : data[7],
-            "rcInterpolationInterval" : data[8],
-            "airModeActivateThreshold" : data[9],
-            "rx_spi_protocol" : data[10],
-            "rx_spi_id" : data[11],
-            "rx_spi_rf_channel_count" : data[12],
-            "fpvCamAngleDegrees" : data[13],
-        }
-        return ret
-
-    def get_status(self):
-        """Get the flight control board status"""
-        data = self.get_data(msp.MSP_STATUS)
-        ret = {
-            "cycle_time" : data[0],
-            "i2c_error_count" : data[1],
-            "sensor" : data[2],
-            "flight_mode" : data[3],
-            "profile" : data[4],
-            "system_load" : data[5],
-            "gyro_cycle_time" : data[6],
-        }
-        return ret
-
-    def get_attitude(self):
-        """Get the attitude data"""
-        data = self.get_data(msp.MSP_ATTITUDE)
-        roll = float(data[0]/10.0)
-        pitch = float(data[1]/10.0)
-        yaw = float(data[2])
-        return roll, pitch, yaw
-
-    def get_altitute(self):
-        """Get the altitude data"""
-        return self.get_data(msp.MSP_ALTITUDE)
-
-    def get_rc(self):
-        """Get the rc data
-
-        Output
-        -------
-        list of [roll, pitch, yaw, throttlw, aux1, aux2, aux3, aux4]
-        """
-        return self.get_data(msp.MSP_RC)
-
-    def get_raw_imu(self):
-        """Get the raw imu data"""
-        return self.get_data(msp.MSP_RAW_IMU)
-
-    def get_motor(self):
-        """Get the motor data"""
-        return self.get_data(msp.MSP_MOTOR)
-
-    def set_rc(self, data):
-        """set the rc data"""
-        self.send_command(msp.MSP_SET_RAW_RC, data)
-
-    def set_motor(self, data):
-        """Set the motor outputs"""
-        self.send_command(msp.MSP_SET_MOTOR, data)
-
     def open_serial(self):
         """Open the serial port"""
         try:
@@ -316,3 +228,174 @@ class MultiWii(object):
         self.ser.close()
         bash_cmd = "stty sane < " + self.ser.port
         os.system(bash_cmd)
+
+def msp_get_rx_config(mw):
+    """Get the flight control board receiver configuration
+
+    Inputs
+    ------
+    mw: an instance of MultiWii
+    """
+    msg = msp.MSP_RX_CONFIG
+    data = mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
+    ret = {
+        "serialrx_provider" : data[0],
+        "maxcheck" : data[1],
+        "midrc": data[2],
+        "mincheck" : data[3],
+        "spektrum_sat_bind" : data[4],
+        "rx_min_usec" : data[5],
+        "rx_max_usec" : data[6],
+        "rcInterpolation" : data[7],
+        "rcInterpolationInterval" : data[8],
+        "airModeActivateThreshold" : data[9],
+        "rx_spi_protocol" : data[10],
+        "rx_spi_id" : data[11],
+        "rx_spi_rf_channel_count" : data[12],
+        "fpvCamAngleDegrees" : data[13],
+    }
+    return ret
+
+def msp_arm(mw):
+    """Arms the motors
+
+    Inputs
+    ------
+    mw: an instance of MultiWii
+    """
+    timer = 0
+    start = time.time()
+    while timer < 0.5:
+        data = [1500, 1500, 2000, 1000]
+        msg = msp.MSP_SET_RAW_RC
+        mw.send_msg(8, msg, data, MSP_PAYLOAD_FMT[msg])
+        time.sleep(0.05)
+        timer = timer + (time.time() - start)
+        start = time.time()
+
+def msp_disarm(mw):
+    """Disarms the motors
+
+    Inputs
+    ------
+    mw: an instance of MultiWii
+    """
+    timer = 0
+    start = time.time()
+    while timer < 0.5:
+        data = [1500, 1500, 1000, 1000]
+        msg = msp.MSP_SET_RAW_RC
+        mw.send_msg(8, msg, data, MSP_PAYLOAD_FMT[msg])
+        time.sleep(0.05)
+        timer = timer + (time.time() - start)
+        start = time.time()
+
+def msp_get_status(mw):
+    """Get the flight control board status
+
+    Inputs
+    ------
+    mw: an instance of MultiWii
+    """
+    msg = msp.MSP_STATUS
+    data = mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
+    ret = {
+        "cycle_time" : data[0],
+        "i2c_error_count" : data[1],
+        "sensor" : data[2],
+        "flight_mode" : data[3],
+        "profile" : data[4],
+        "system_load" : data[5],
+        "gyro_cycle_time" : data[6],
+    }
+    return ret
+
+def msp_get_attitude(mw):
+    """Get the attitude data
+
+    Inputs
+    ------
+    mw: an instance of MultiWii
+    """
+    msg = msp.MSP_STATUS
+    data = mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
+    data = mw.get_data(msp.MSP_ATTITUDE)
+    roll = float(data[0]/10.0)
+    pitch = float(data[1]/10.0)
+    yaw = float(data[2])
+    return roll, pitch, yaw
+
+def msp_get_altitute(mw):
+    """Get the altitude data
+
+    Inputs
+    ------
+    mw: an instance of MultiWii
+    """
+    msg = msp.MSP_STATUS
+    return mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
+
+def msp_get_rc(mw):
+    """Get the rc data
+
+    Inputs
+    ------
+    mw: an instance of MultiWii
+
+    Output
+    -------
+    list of [roll, pitch, yaw, throttlw, aux1, aux2, aux3, aux4]
+    """
+    msg = msp.MSP_RC
+    return mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
+
+def msp_get_raw_imu(mw):
+    """Get the raw imu data
+
+    Inputs
+    ------
+    mw: an instance of MultiWii
+    """
+    msg = msp.MSP_RAW_IMU
+    return mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
+
+def msp_get_motor(mw):
+    """Get the motor data
+
+    Inputs
+    ------
+    mw: an instance of MultiWii
+    """
+    msg = msp.MSP_MOTOR
+    return mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
+
+def msp_set_pid(self, pid_coeff):
+    """Set the PID coefficients
+
+    Inputs
+    ------
+    mw: an instance of MultiWii
+    """
+    raise NotImplementedError
+
+def msp_set_rc(mw, data):
+    """set the rc data
+
+    Inputs
+    ------
+    mw: an instance of MultiWii
+    """
+    msg = msp.MSP_STATUS
+    data = mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
+    mw.send_command(msp.MSP_SET_RAW_RC, data)
+
+def msp_set_motor(mw, data):
+    """Set the motor outputs
+
+    Inputs
+    ------
+    mw: an instance of MultiWii
+    """
+    msg = msp.MSP_S
+    data = mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
+    mw.send_command(msp.MSP_SET_MOTOR, data)
