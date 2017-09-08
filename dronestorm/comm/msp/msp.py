@@ -45,8 +45,37 @@ class MultiWii(object):
     Specific formatting is specific to each Type
 
     Checksum is the XOR of all of the bits in [Size, Type, Payload]
+
+    Parameters
+    ----------
+    port : string (default "/dev/ttyUSB0")
+        Location of port attached to the flight control board
+    rx_type : one of RX_* from msp_types (default RX_MSP)
+        Indicate the type of protocol used to send receiver commands
+        Current flight control board firmware does not provide complete
+        information on receiver setup (only specifies which of the serial
+        protocols (not including MSP) is used), so the user must provide this
+        information for now...
+    firmware_type : one of FIRMWARE_* from msp_types (default FIRMWARE_BF)
+        Indicate the type of firmware used by the flight control board
+        Current flight control board firmware does not provide information on
+        firmware itself so the user must provide this information for now...
     """
-    def __init__(self, port="/dev/ttyUSB0"):
+    def __init__(self, port="/dev/ttyUSB0",
+                 rx_protocol=msp.RX_MSP, firmware=msp.FIRMWARE_BF):
+
+        assert rx_protocol in msp.RX_OPTIONS, (
+            "unsupported rx protocol indicated")
+        self.rx_protocol = rx_protocol
+        self.rx_protocol_ch_count = len(
+            MSP_PAYLOAD_FMT[msp.MSP_RC][rx_protocol][1:])
+
+        assert firmware in msp.FIRMWARE_OPTIONS, (
+            "unsupported firmware indicated")
+        self.firmware = firmware
+        self.firmware_motor_count = len(
+            MSP_PAYLOAD_FMT[msp.MSP_MOTOR][firmware][1:])
+
         self.ser = serial.Serial()
         self.ser.port = port
         self.ser.baudrate = 115200
@@ -59,6 +88,24 @@ class MultiWii(object):
         self.ser.dsrdtr = False
         self.ser.writeTimeout = 2
         self.open_serial()
+
+    def open_serial(self):
+        """Open the serial port"""
+        try:
+            self.ser.open()
+        except(Exception) as error:
+            print("\n\nError opening port "+self.ser.port +":")
+            print(str(error)+"\n\n")
+            # reset the stty settings
+            bash_cmd = "stty sane < " + self.ser.port
+            os.system(bash_cmd)
+            raise error
+
+    def close_serial(self):
+        """Close the serial port and reset the stty settings"""
+        self.ser.close()
+        bash_cmd = "stty sane < " + self.ser.port
+        os.system(bash_cmd)
 
     @staticmethod
     def _compute_checksum(packet):
@@ -102,6 +149,7 @@ class MultiWii(object):
         except(Exception) as error:
             print("\n\nError sending command on port " + self.ser.port)
             print(str(error) + "\n\n")
+            self.close_serial()
             raise error
 
     def get_data(self, cmd, data_len, fmt):
@@ -120,7 +168,7 @@ class MultiWii(object):
             data length as defined by one of the entries in MSP_PAYLOAD_LEN
             in the msp_types module
         fmt : string
-            payload unpacking format string as defined by one of the entries
+            payload packing format string as defined by one of the entries
             in MSP_PAYLOAD_FMT in the msp_types module
 
         Outputs
@@ -164,8 +212,7 @@ class MultiWii(object):
         except(Exception) as error:
             print("\n\nError in get_data on port "+self.ser.port)
             print(str(error)+"\n\n")
-            self.ser.reset_input_buffer()
-            self.ser.reset_output_buffer()
+            self.close_serial()
             raise error
         return data
 
@@ -176,22 +223,27 @@ class MultiWii(object):
         ------
         cmd : int
             command as defined by the MSP_* identifiers
+        data_len : int
+            data length as defined by one of the entries in MSP_PAYLOAD_LEN
+            in the msp_types module
+        fmt : string
+            payload packing format string as defined by one of the entries
+            in MSP_PAYLOAD_FMT in the msp_types module
         data : list
             data to be sent with the command; empty list if no data
         """
         try:
             # send command
-            self.send_msg(
-                MSP_PAYLOAD_LEN[cmd], cmd, data, MSP_PAYLOAD_FMT[cmd])
+            self.send_msg(data_len, cmd, data, fmt)
             # get acknowledgement
             ack_packet = self.ser.read(6)
             header = ack_packet[:3].decode() # [$, M, {<, >}, type, crc]
             direction = header[2]
-            data_length = ack_packet[3]
+            packet_data_length = ack_packet[3]
             msg_type = ack_packet[4]
             # handle python 2 vs 3 string vs bytes differences
-            if isinstance(data_length, str):
-                data_length = ord(data_length)
+            if isinstance(packet_data_length, str):
+                packet_data_length = ord(packet_data_length)
                 msg_type = ord(msg_type)
             # check that message received matches expected message
             assert msg_type == cmd, (
@@ -203,33 +255,18 @@ class MultiWii(object):
             assert direction == '>', (
                 "Unexpected MSP message direction. " +
                 "Expected '<' but received '>'")
+            assert packet_data_length == 0, (
+                "Unexpected MSP payload length in acknowledge packet. " +
+                "Expected %d but received %d"%(0, packet_data_length))
             self.ser.reset_output_buffer()
             self.ser.reset_input_buffer()
         except(Exception) as error:
             print("\n\nError in send_command on port "+self.ser.port)
             print(str(error)+"\n\n")
-            self.ser.reset_input_buffer()
-            self.ser.reset_output_buffer()
+            self.close_serial()
             raise error
 
-    def open_serial(self):
-        """Open the serial port"""
-        try:
-            self.ser.open()
-        except(Exception) as error:
-            print("\n\nError opening port "+self.ser.port +":")
-            print(str(error)+"\n\n")
-            bash_cmd = "stty sane < " + self.ser.port
-            os.system(bash_cmd)
-            raise error
-
-    def close_serial(self):
-        """Close the serial port and reset the stty settings"""
-        self.ser.close()
-        bash_cmd = "stty sane < " + self.ser.port
-        os.system(bash_cmd)
-
-def msp_get_rx_config(mw):
+def get_rx_config(mw):
     """Get the flight control board receiver configuration
 
     Inputs
@@ -256,7 +293,7 @@ def msp_get_rx_config(mw):
     }
     return ret
 
-def msp_arm(mw):
+def arm(mw):
     """Arms the motors
 
     Inputs
@@ -273,7 +310,7 @@ def msp_arm(mw):
         timer = timer + (time.time() - start)
         start = time.time()
 
-def msp_disarm(mw):
+def disarm(mw):
     """Disarms the motors
 
     Inputs
@@ -290,7 +327,7 @@ def msp_disarm(mw):
         timer = timer + (time.time() - start)
         start = time.time()
 
-def msp_get_status(mw):
+def get_status(mw):
     """Get the flight control board status
 
     Inputs
@@ -310,7 +347,7 @@ def msp_get_status(mw):
     }
     return ret
 
-def msp_get_attitude(mw):
+def get_attitude(mw):
     """Get the attitude data
 
     Inputs
@@ -325,7 +362,7 @@ def msp_get_attitude(mw):
     yaw = float(data[2])
     return roll, pitch, yaw
 
-def msp_get_altitute(mw):
+def get_altitute(mw):
     """Get the altitude data
 
     Inputs
@@ -335,7 +372,7 @@ def msp_get_altitute(mw):
     msg = msp.MSP_STATUS
     return mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
 
-def msp_get_rc(mw):
+def get_rc(mw):
     """Get the rc data
 
     Inputs
@@ -347,9 +384,12 @@ def msp_get_rc(mw):
     list of [roll, pitch, yaw, throttlw, aux1, aux2, aux3, aux4]
     """
     msg = msp.MSP_RC
-    return mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
+    return mw.get_data(
+        msg,
+        MSP_PAYLOAD_LEN[msg][mw.rx_protocol],
+        MSP_PAYLOAD_FMT[msg][mw.rx_protocol])
 
-def msp_get_raw_imu(mw):
+def get_raw_imu(mw):
     """Get the raw imu data
 
     Inputs
@@ -359,7 +399,7 @@ def msp_get_raw_imu(mw):
     msg = msp.MSP_RAW_IMU
     return mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
 
-def msp_get_motor(mw):
+def get_motor(mw):
     """Get the motor data
 
     Inputs
@@ -367,9 +407,12 @@ def msp_get_motor(mw):
     mw: an instance of MultiWii
     """
     msg = msp.MSP_MOTOR
-    return mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
+    return mw.get_data(
+        msg,
+        MSP_PAYLOAD_LEN[msg][mw.firmware],
+        MSP_PAYLOAD_FMT[msg][mw.firmware])
 
-def msp_set_pid(self, pid_coeff):
+def set_pid(self, pid_coeff):
     """Set the PID coefficients
 
     Inputs
@@ -378,24 +421,69 @@ def msp_set_pid(self, pid_coeff):
     """
     raise NotImplementedError
 
-def msp_set_rc(mw, data):
+def set_rc(mw, data):
     """set the rc data
 
     Inputs
     ------
     mw: an instance of MultiWii
+    data: int or list of ints
+        rc values to set
+        if list, can have up to the number of motors supported by the firmware
+            if fewer than the numbe of supported motors, the rest of the motors
+            will be set to midpoint values
+        if int, will set all motors to that value
     """
-    msg = msp.MSP_STATUS
-    data = mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
-    mw.send_command(msp.MSP_SET_RAW_RC, data)
+    msg = msp.MSP_SET_RAW_RC
+    assert isinstance(data, (int, list)), (
+        "set_rc expects data to be list of ints or int"
+    )
+    if isinstance(data, list):
+        len_data = len(data)
+        assert len_data <= mw.rx_protocol_ch_count, (
+            "rx protocol only supports up to %d channels"%(
+                mw.rx_protocol_ch_count)
+        )
+        if len_data < mw.rx_protocol_ch_count:
+            rc_midpoint = 1500
+            data = data + [
+                rc_midpoint for i in range(mw.rx_protocol_ch_count-len_data)]
+    elif isinstance(data, int):
+        data = [data for i in range(mw.rx_protocol_ch_count)]
+    mw.send_command(
+        msg,
+        MSP_PAYLOAD_LEN[msg][mw.rx_protocol],
+        MSP_PAYLOAD_FMT[msg][mw.rx_protocol],
+        data)
 
-def msp_set_motor(mw, data):
+def set_motor(mw, data):
     """Set the motor outputs
 
     Inputs
     ------
     mw: an instance of MultiWii
+    data: int or list of ints
+        motor values to set
+        if list, can have up to the number of motors supported by the firmware
+            if fewer than the numbe of supported motors, the rest of the motors
+            will be set to 0
+        if int, will set all motors to that value
     """
-    msg = msp.MSP_S
-    data = mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
-    mw.send_command(msp.MSP_SET_MOTOR, data)
+    msg = msp.MSP_SET_MOTOR
+    assert isinstance(data, (int, list)), (
+        "set_motor expects data to be list of ints or int"
+    )
+    if isinstance(data, list):
+        len_data = len(data)
+        assert len_data <= mw.firmware_motor_count, (
+            "firmware only supports up to %d motors"%mw.firmware_motor_count
+        )
+        if len_data < mw.firmware_motor_count:
+            data = data + [0 for i in range(mw.firmware_motor_count-len_data)]
+    elif isinstance(data, int):
+        data = [data for i in range(mw.firmware_motor_count)]
+    mw.send_command(
+        msg,
+        MSP_PAYLOAD_LEN[msg][mw.firmware],
+        MSP_PAYLOAD_FMT[msg][mw.firmware],
+        data)
