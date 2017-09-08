@@ -212,7 +212,9 @@ class MultiWii(object):
         except(Exception) as error:
             print("\n\nError in get_data on port "+self.ser.port)
             print(str(error)+"\n\n")
-            self.close_serial()
+            self.ser.reset_input_buffer()
+            self.ser.reset_output_buffer()
+            # self.close_serial()
             raise error
         return data
 
@@ -247,23 +249,25 @@ class MultiWii(object):
                 msg_type = ord(msg_type)
             # check that message received matches expected message
             assert msg_type == cmd, (
-                "Unexpected MSP message type detected. " +
-                "Received %d Expected %d"%(msg_type, cmd))
+                "Unexpected MSP message type detected in command acknowldge "+
+                "packet. Received %d Expected %d"%(msg_type, cmd))
             assert direction != '!', (
-                "Invalid MSP message direction '!' detected. " +
-                "Indicates invalid request.")
+                "Invalid MSP message direction '!' detected in command"+
+                "acknowdege packet. Indicates invalid request.")
             assert direction == '>', (
-                "Unexpected MSP message direction. " +
-                "Expected '<' but received '>'")
+                "Unexpected MSP message direction in command acknowledge "+
+                "packet. Expected '<' but received '>'")
             assert packet_data_length == 0, (
-                "Unexpected MSP payload length in acknowledge packet. " +
-                "Expected %d but received %d"%(0, packet_data_length))
+                "Unexpected MSP payload length in command acknowledge packet."+
+                " Expected %d but received %d"%(0, packet_data_length))
             self.ser.reset_output_buffer()
             self.ser.reset_input_buffer()
         except(Exception) as error:
             print("\n\nError in send_command on port "+self.ser.port)
             print(str(error)+"\n\n")
-            self.close_serial()
+            self.ser.reset_input_buffer()
+            self.ser.reset_output_buffer()
+            # self.close_serial()
             raise error
 
 def get_rx_config(mw):
@@ -384,10 +388,14 @@ def get_rc(mw):
     list of [roll, pitch, yaw, throttlw, aux1, aux2, aux3, aux4]
     """
     msg = msp.MSP_RC
-    return mw.get_data(
-        msg,
-        MSP_PAYLOAD_LEN[msg][mw.rx_protocol],
-        MSP_PAYLOAD_FMT[msg][mw.rx_protocol])
+    try:
+        data = mw.get_data(
+            msg,
+            MSP_PAYLOAD_LEN[msg][mw.rx_protocol],
+            MSP_PAYLOAD_FMT[msg][mw.rx_protocol])
+    except:
+        data = None
+    return data
 
 def get_raw_imu(mw):
     """Get the raw imu data
@@ -450,11 +458,14 @@ def set_rc(mw, data):
                 rc_midpoint for i in range(mw.rx_protocol_ch_count-len_data)]
     elif isinstance(data, int):
         data = [data for i in range(mw.rx_protocol_ch_count)]
-    mw.send_command(
-        msg,
-        MSP_PAYLOAD_LEN[msg][mw.rx_protocol],
-        MSP_PAYLOAD_FMT[msg][mw.rx_protocol],
-        data)
+    try:
+        mw.send_command(
+            msg,
+            MSP_PAYLOAD_LEN[msg][mw.rx_protocol],
+            MSP_PAYLOAD_FMT[msg][mw.rx_protocol],
+            data)
+    except:
+        pass
 
 def set_motor(mw, data):
     """Set the motor outputs
@@ -482,8 +493,11 @@ def set_motor(mw, data):
             data = data + [0 for i in range(mw.firmware_motor_count-len_data)]
     elif isinstance(data, int):
         data = [data for i in range(mw.firmware_motor_count)]
-    mw.send_command(
-        msg,
-        MSP_PAYLOAD_LEN[msg][mw.firmware],
-        MSP_PAYLOAD_FMT[msg][mw.firmware],
-        data)
+    try:
+        mw.send_command(
+            msg,
+            MSP_PAYLOAD_LEN[msg][mw.firmware],
+            MSP_PAYLOAD_FMT[msg][mw.firmware],
+            data)
+    except:
+        pass
