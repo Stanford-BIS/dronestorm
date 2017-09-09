@@ -1,3 +1,4 @@
+# test the MultiWii Serial Protocol communication
 import dronestorm.comm as comm
 from dronestorm.comm import MultiWii, msp
 from dronestorm.comm.msp.msp_types import (
@@ -36,10 +37,8 @@ for n in range(100):
     for rc_value in [100*i for i in range(10,21)]:
         print("setting rc to %d"%rc_value)
         msp.set_rc(mw, [rc_value for i in range(6)])
-        # time.sleep(0.1)
         print("checking that rc set to %d"%rc_value)
         print(msp.get_rc(mw))
-        # time.sleep(0.1)
     print()
     
 print("getting imu")

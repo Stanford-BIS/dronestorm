@@ -205,16 +205,12 @@ class MultiWii(object):
             assert packet_data_len == data_len, (
                 "Unexpected MSP payload length. " +
                 "Expected %d but received %d"%(data_len, packet_data_len))
-            buf = self.ser.read(data_len)
-            data = struct.unpack(fmt, buf)
-            self.ser.reset_input_buffer()
-            self.ser.reset_output_buffer()
+            buf = self.ser.read(data_len+1)
+            data = struct.unpack(fmt, buf[:-1]) # use up to the checksum
         except(Exception) as error:
             print("\n\nError in get_data on port "+self.ser.port)
             print(str(error)+"\n\n")
-            self.ser.reset_input_buffer()
-            self.ser.reset_output_buffer()
-            # self.close_serial()
+            self.close_serial()
             raise error
         return data
 
@@ -260,14 +256,10 @@ class MultiWii(object):
             assert packet_data_length == 0, (
                 "Unexpected MSP payload length in command acknowledge packet."+
                 " Expected %d but received %d"%(0, packet_data_length))
-            self.ser.reset_output_buffer()
-            self.ser.reset_input_buffer()
         except(Exception) as error:
             print("\n\nError in send_command on port "+self.ser.port)
             print(str(error)+"\n\n")
-            self.ser.reset_input_buffer()
-            self.ser.reset_output_buffer()
-            # self.close_serial()
+            self.close_serial()
             raise error
 
 def get_rx_config(mw):
@@ -388,13 +380,10 @@ def get_rc(mw):
     list of [roll, pitch, yaw, throttlw, aux1, aux2, aux3, aux4]
     """
     msg = msp.MSP_RC
-    try:
-        data = mw.get_data(
-            msg,
-            MSP_PAYLOAD_LEN[msg][mw.rx_protocol],
-            MSP_PAYLOAD_FMT[msg][mw.rx_protocol])
-    except:
-        data = None
+    data = mw.get_data(
+        msg,
+        MSP_PAYLOAD_LEN[msg][mw.rx_protocol],
+        MSP_PAYLOAD_FMT[msg][mw.rx_protocol])
     return data
 
 def get_raw_imu(mw):
@@ -458,14 +447,11 @@ def set_rc(mw, data):
                 rc_midpoint for i in range(mw.rx_protocol_ch_count-len_data)]
     elif isinstance(data, int):
         data = [data for i in range(mw.rx_protocol_ch_count)]
-    try:
-        mw.send_command(
-            msg,
-            MSP_PAYLOAD_LEN[msg][mw.rx_protocol],
-            MSP_PAYLOAD_FMT[msg][mw.rx_protocol],
-            data)
-    except:
-        pass
+    mw.send_command(
+        msg,
+        MSP_PAYLOAD_LEN[msg][mw.rx_protocol],
+        MSP_PAYLOAD_FMT[msg][mw.rx_protocol],
+        data)
 
 def set_motor(mw, data):
     """Set the motor outputs
@@ -493,11 +479,8 @@ def set_motor(mw, data):
             data = data + [0 for i in range(mw.firmware_motor_count-len_data)]
     elif isinstance(data, int):
         data = [data for i in range(mw.firmware_motor_count)]
-    try:
-        mw.send_command(
-            msg,
-            MSP_PAYLOAD_LEN[msg][mw.firmware],
-            MSP_PAYLOAD_FMT[msg][mw.firmware],
-            data)
-    except:
-        pass
+    mw.send_command(
+        msg,
+        MSP_PAYLOAD_LEN[msg][mw.firmware],
+        MSP_PAYLOAD_FMT[msg][mw.firmware],
+        data)
