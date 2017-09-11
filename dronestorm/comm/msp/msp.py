@@ -392,6 +392,12 @@ def get_raw_imu(mw):
     Inputs
     ------
     mw: an instance of MultiWii
+
+    Outputs
+    -------
+    [acc_x, acc_y, acc_z,
+     roll_rate, pitch_rate, yaw_rate,
+     mag0, mag1, mag2]
     """
     msg = msp.MSP_RAW_IMU
     return mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
@@ -441,17 +447,10 @@ def set_rc(mw, data):
             "rx protocol only supports up to %d channels"%(
                 mw.rx_protocol_ch_count)
         )
-        if len_data < mw.rx_protocol_ch_count:
-            rc_midpoint = 1500
-            data = data + [
-                rc_midpoint for i in range(mw.rx_protocol_ch_count-len_data)]
     elif isinstance(data, int):
         data = [data for i in range(mw.rx_protocol_ch_count)]
-    mw.send_command(
-        msg,
-        MSP_PAYLOAD_LEN[msg][mw.rx_protocol],
-        MSP_PAYLOAD_FMT[msg][mw.rx_protocol],
-        data)
+        len_data = len(data)
+    mw.send_command(msg, 2*len_data, MSP_PAYLOAD_FMT[msg][:len_data+1], data)
 
 def set_motor(mw, data):
     """Set the motor outputs

@@ -86,12 +86,7 @@ MSP_PAYLOAD_LEN = {
     MSP_ANALOG : 7,
     MSP_RC_TUNING : 7,
     MSP_WP : 18,
-    MSP_SET_RAW_RC : {
-        RX_PWM : 16,
-        RX_PPM : 24,
-        RX_SERIAL_SPEKTRUM2048 : 24,
-        RX_MSP : 36,
-    }, 
+    MSP_SET_RAW_RC : 36, # based on firmware, possible to send fewer channels
     MSP_SET_RAW_GPS : 14,
     MSP_SET_RC_TUNING : 7,
     MSP_ACC_CALIBRATION : 0,
@@ -128,13 +123,7 @@ MSP_PAYLOAD_FMT = {
     MSP_ANALOG : '<BHHH',
     MSP_RC_TUNING : '<BBBBBBB',
     MSP_WP : '<BIIIHHB',
-    MSP_SET_RAW_RC : {
-        RX_PWM : '<'+MSP_PAYLOAD_LEN[MSP_SET_RAW_RC][RX_PWM]//2*'H',
-        RX_PPM : '<'+MSP_PAYLOAD_LEN[MSP_SET_RAW_RC][RX_PPM]//2*'H',
-        RX_SERIAL_SPEKTRUM2048 : '<'+(
-            MSP_PAYLOAD_LEN[MSP_SET_RAW_RC][RX_SERIAL_SPEKTRUM2048]//2*'H'),
-        RX_MSP : '<'+MSP_PAYLOAD_LEN[MSP_SET_RAW_RC][RX_MSP]//2*'H',
-    },
+    MSP_SET_RAW_RC : '<HHHHHHHHHHHHHHHHHH',
     MSP_SET_RAW_GPS : '<BBIIHHH',
     MSP_SET_RC_TUNING : '<BBBBBBB',
     MSP_ACC_CALIBRATION : '',

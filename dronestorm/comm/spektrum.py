@@ -18,8 +18,8 @@ class SpektrumRemoteReceiver(object):
     """ Handle communication over Spektrum remote receiver protocol
 
     The remote receiver protocol is so named because it is the protocol used
-    between Spektrum remote receivers (AKA external receivers and satellites) and
-    Spektrum primary receivers (AKA internal receivers)
+    between Spektrum remote receivers (AKA external receivers and satellites)
+    and Spektrum primary receivers (AKA internal receivers)
     """
     def __init__(self, port='/dev/serial0'):
         self.ser = serial.Serial()
@@ -53,27 +53,29 @@ class SpektrumRemoteReceiver(object):
     
         Spektrum Remote Receivers (AKA Spektrum Satellite) communicate serially
         in 16 byte packets at 125000 bits per second (bps)(aka baud) but are
-        compatible with the standard 115200bps rate. We don't control the output
-        transmission timing of the Spektrum receiver unit and so might start
-        reading from the serial port in the middle of a packet transmission.
-        To align the reading from the serial port with the packet transmission,
-        we use the timing between packets to detect the interval between packets
+        compatible with the standard 115200bps rate. We don't control the
+        output transmission timing of the Spektrum receiver unit and so might
+        start reading from the serial port in the middle of a packet
+        transmission. To align the reading from the serial port with the packet
+        transmission, we use the timing between packets to detect the interval
+        between packets.
     
         Packets are communicated every 11ms. At 115200 bps, a bit is read in 
         approximately 8.69us, so a 16 byte (128 bit)
-        packet will take around 1.11ms to be communicated, leaving a gap of about
-        9.89ms between packets. We align our serial port reading with the protocol
-        by detecting this gap between reads.
+        packet will take around 1.11ms to be communicated, leaving a gap of
+        about 9.89ms between packets. We align our serial port reading with
+        the protocol by detecting this gap between reads.
     
         Note that we do not use the packet header contents because
             1) They are product dependent. Specifically, "internal" Spektrum
-            receivers indicate the system protocol in the second byte of the header
-            but "external" receivers do not. Further, different products are
-            use different protocols and indicate this using the
+            receivers indicate the system protocol in the second byte of the
+            header but "external" receivers do not. Further, different products
+            are use different protocols and indicate this using the
             system protocol byte.
-            2) Other bytes in the packet may take on the same value as the header
-            contents. No bit patterns of a byte are reserved, so any byte in the
-            data payload of the packet could match the values of the header bytes.
+            2) Other bytes in the packet may take on the same value as the
+            header contents. No bit patterns of a byte are reserved, so any
+            byte in the data payload of the packet could match the values of
+            the header bytes.
     
         Inputs
         ------
@@ -81,8 +83,8 @@ class SpektrumRemoteReceiver(object):
             serial port to read from
         """
         data = None
-        # read in the first byte, might be a long delay in case the transmitter is
-        # off when the program begins
+        # read in the first byte, might be a long delay in case the transmitter
+        # is off when the program begins
         self.ser.read(1)
         dt = 0
         # wait for the next long delay between reads
