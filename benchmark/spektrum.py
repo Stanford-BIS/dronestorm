@@ -15,7 +15,7 @@ dt_read = np.zeros(N)
 rrx.align_serial()
 for n in range(N):
     start = time.time()
-    rrx.get_data()
+    rrx.read_data()
     dt_read[n] = time.time()-start
 mean_dt_read = np.mean(dt_read)
 median_dt_read = np.median(dt_read)

@@ -8,12 +8,18 @@ Bidirectional Receiver Link (AKA SPEKTRUM Bidir SRXL in Betaflight).
 from __future__ import print_function
 import time
 import os
+import struct
 import serial
 
 N_CHAN = 12
 MASK_CH_ID = 0b01111000 # 0x78
 SHIFT_CH_ID = 3
 MASK_SERVO_POS_HIGH = 0b00000111 # 0x07
+SPEKTRUM_11MS_2048_DSMX_SYS_ID = 0xb2
+CH_PER_PACKET = 7
+RC_MIN = 988
+RC_MID = 1500
+RC_MAX = 2011
 
 class SpektrumRemoteReceiver(object):
     """ Handle communication over Spektrum remote receiver protocol
@@ -104,13 +110,35 @@ class SpektrumRemoteReceiver(object):
         # protocol now
         self.ser.read(15)
 
+    def read_raw_channel_data(self):
+        """Get the raw rc channel data from the receiver unit"""
+        return self.ser.read(16)
+
+    def write_raw_channel_data(self, data):
+        """Write raw rc channel data"""
+        return self.ser.write(data)
+
     @staticmethod
-    def _parse_channel_data(data):
-        """Parse a channel's 2 bytes of data in a remote receiver packet
+    def _serial_to_rc(serial_value):
+        """Convert a serial value to an rc value
+
+        Values transmitted over the remote receiver serial link range from
+        0-2047 but rc values range from 988-2011
+        Inputs
+        ------
+        serial_value : int
+            value transmitted over the serial remote receiver protocol
+        """
+        rc_value = RC_MIN + (serial_value >> 1)
+        return rc_value
+
+    @staticmethod
+    def _decode_serial_channel_data(ch_data):
+        """Decode a channel's 2 byte remote receiver representation
 
         Inputs
         ------
-        data : 2 byte long string (currently only supporting Python 2)
+        ch_data : 2 byte string (currently only supporting Python 2)
             Bytes within the remote receiver packet representing a channel's
             data
 
@@ -118,30 +146,78 @@ class SpektrumRemoteReceiver(object):
         -------
         channel_id, channel_data
         """
-        ch_id = (ord(data[0]) & MASK_CH_ID) >> SHIFT_CH_ID
-        ch_data = (
-            ((ord(data[0]) & MASK_SERVO_POS_HIGH) << 8) | ord(data[1]))
-        ch_data = 988 + (ch_data >> 1)
-        return ch_id, ch_data
+        ch_id = (ord(ch_data[0]) & MASK_CH_ID) >> SHIFT_CH_ID
+        serial_val = (
+            ((ord(ch_data[0]) & MASK_SERVO_POS_HIGH) << 8) | ord(ch_data[1]))
+        rc_val = SpektrumRemoteReceiver._serial_to_rc(serial_val)
+        return ch_id, rc_val
 
-    def get_data(self):
+    def read_data(self):
         """Get the rc channel data from the receiver unit"""
-        data_buf = self.ser.read(16)
+        data_buf = self.read_raw_channel_data()
         data = data_buf[2:] # discard the header
         for i in range(7):
-            ch_id, servo_pos = self._parse_channel_data(data[2*i:2*i+2])
+            ch_id, servo_pos = self._decode_serial_channel_data(
+                data[2*i:2*i+2])
             # spektrum sends a mysterious, undocumented channel 12
             if ch_id < N_CHAN:
                 self.rc_data[ch_id] = servo_pos
         return self.rc_data
 
-    def send_data(self, data):
+    @staticmethod
+    def _rc_to_serial(rc_val):
+        """Convert an rc value to a serial value
+
+        Values transmitted over the remote receiver serial link range from
+        0-2047 but rc values range from 988-2011
+        Inputs
+        ------
+        rc_value : int
+            value to transmit over the serial remote receiver protocol
+        """
+        assert (rc_val >= RC_MIN) & (rc_val <= RC_MAX), (
+            "Valid rc values %d-%d"%(RC_MIN, RC_MAX))
+        serial_value = (rc_val - RC_MIN) << 1
+        return serial_value
+
+    @staticmethod
+    def _encode_serial_channel_data(ch_id, rc_val):
+        """Encode a channel's 2 byte remote receiver representation
+
+        Inputs
+        ------
+        ch_id : int
+            channel number 0-11
+        ch_val : int
+            channel's rc value 988-2011
+
+        Outputs
+        -------
+        channel_data : 2 byte string (currently only supports Python 2)
+        """
+        serial_val = SpektrumRemoteReceiver._rc_to_serial(rc_val)
+        ch_data = struct.pack('>H', (ch_id << 11) | serial_val)
+        return ch_data
+
+    def write_data(self, rc_data):
         """Send rc channel data
 
         Inputs
         ------
-        data : list-like data structure containing the current receiver data
-            Use for performance reasons.
-            If None, will generate a new list with each call
+        rc_data : list-like
+            rc data to send, indexed by channel
+            valid values 988-2011
         """
-        self.ser.write(data_buf)
+        len_data = len(rc_data)
+        assert len_data <= N_CHAN, (
+            "Spektrum remote receiver protocol "+
+            "supports only up to %d channels"%N_CHAN)
+
+        # write header
+        packet = struct.pack('>BB', 0, SPEKTRUM_11MS_2048_DSMX_SYS_ID)
+        for ch_idx, rc_val in enumerate(rc_data):
+            packet += self._encode_serial_channel_data(ch_idx, rc_val)
+        if len_data < CH_PER_PACKET:
+            for ch_idx in range(len_data, CH_PER_PACKET):
+                packet += self._encode_serial_channel_data(ch_idx, RC_MID)
+        self.write_raw_channel_data(packet)
