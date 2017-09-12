@@ -2,19 +2,19 @@
 import sys
 from dronestorm.comm import SpektrumRemoteReceiver
 
-print("Throttle     Roll    Pitch      Yaw     AUX1     AUX2")
+N=100
+print("Testing Spektrum remote receiver")
+print("Please ensure that:")
+print("  - the remote receiver is connected properly to the pc")
+print("  - the transmitter and receiver are bound")
+print("  - the transmitter is on\n")
 
 rrx = SpektrumRemoteReceiver()
-
 try:
     rrx.align_serial()
-    while True:
+    for i in range(N):
         rc_data = rrx.get_data()
-        sys.stdout.write(
-            "    %4d     %4d     %4d     %4d     %4d     %4d\r"%tuple(
-            rc_data[:6]))
-        sys.stdout.flush()
-
+        print(rc_data)
         # ser.write(data_buf)
 except(KeyboardInterrupt, SystemExit):
     rrx.close_serial()

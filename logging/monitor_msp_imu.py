@@ -1,9 +1,9 @@
-"""Monitor drone sensor values
-"""
-from dronestorm import DroneComm
+"""Monitor drone IMU sensor values"""
+from __future__ import absolute_import
 import sys
+from dronestorm import DroneComm
 
-drone = DroneComm(pwm_ctrl=False)
+drone = DroneComm(pwm_ctrl=False, port='/dev/ttyACM0')
 
 print('  roll  droll | pitch dpitch |   yaw   dyaw |    ax     ay     az')
 try:

@@ -3,10 +3,10 @@
 Receives telemetry data: angx, angy and heading
 Transmits attitude commands: roll, pitch, yaw
 """
-
 from __future__ import division
 from __future__ import print_function
 import Adafruit_PCA9685
+from .msp import MultiWii, get_attitude, get_raw_imu
 
 class DroneComm(object):
     """Handles communication to and from the drone.
@@ -257,14 +257,14 @@ class DroneComm(object):
 
     def update_attitude(self):
         """Update the attitude data from the flight controller"""
-        data = self.board.get_attitude()
+        data = get_attitude(self.board)
         self.attitude['roll'] = data[0]
         self.attitude['pitch'] = data[1]
         self.attitude['yaw'] = data[2]
 
     def update_imu(self):
         """Updates the IMU data from the flight controller"""
-        data = self.board.get_raw_imu()
+        data = get_raw_imu(self.board)
         self.imu['ax'] = data[0]
         self.imu['ay'] = data[1]
         self.imu['az'] = data[2]
