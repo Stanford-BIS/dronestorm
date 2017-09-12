@@ -100,9 +100,9 @@ class SpektrumRemoteReceiver(object):
             start = time.time()
             self.ser.read()
             dt_meas = time.time()-start
-        # consume the rest of the packet
+        # consume the rest of the packet and we should be aligned with the
+        # protocol now
         self.ser.read(15)
-        # should be aligned with protocol now
 
     @staticmethod
     def _parse_channel_data(data):
