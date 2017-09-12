@@ -1,4 +1,4 @@
-# test the MultiWii Serial Protocol communication
+# benchmark the MultiWii Serial Protocol communication
 import dronestorm.comm as comm
 from dronestorm.comm import MultiWii, msp
 from dronestorm.comm.msp.msp_types import RX_MSP, FIRMWARE_BF

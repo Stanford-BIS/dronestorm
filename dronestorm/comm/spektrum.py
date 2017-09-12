@@ -135,13 +135,13 @@ class SpektrumRemoteReceiver(object):
                 self.rc_data[ch_id] = servo_pos
         return self.rc_data
 
-    # def send_data(self, data):
-    #     """Send rc channel data
+    def send_data(self, data):
+        """Send rc channel data
 
-    #     Inputs
-    #     ------
-    #     data : list-like data structure containing the current receiver data
-    #         Use for performance reasons.
-    #         If None, will generate a new list with each call
-    #     """
-    #     self.ser.write(data_buf)
+        Inputs
+        ------
+        data : list-like data structure containing the current receiver data
+            Use for performance reasons.
+            If None, will generate a new list with each call
+        """
+        self.ser.write(data_buf)

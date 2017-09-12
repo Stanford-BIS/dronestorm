@@ -1,6 +1,6 @@
 # Tests the spektrum communication module
 import sys
-from dronestorm.comm.spektrum import SpektrumRemoteReceiver
+from dronestorm.comm import SpektrumRemoteReceiver
 
 print("Throttle     Roll    Pitch      Yaw     AUX1     AUX2")
 
@@ -14,7 +14,6 @@ try:
             "    %4d     %4d     %4d     %4d     %4d     %4d\r"%tuple(
             rc_data[:6]))
         sys.stdout.flush()
-        # print(rc_data)
 
         # ser.write(data_buf)
 except(KeyboardInterrupt, SystemExit):
