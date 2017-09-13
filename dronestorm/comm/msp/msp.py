@@ -50,6 +50,9 @@ class MultiWii(object):
     ----------
     port : string (default "/dev/ttyUSB0")
         Location of port attached to the flight control board
+    bitrate : int (default 115200 bits per second)
+        serial communication bit rate
+        (AKA baud and baudrate)
     rx_type : one of RX_* from msp_types (default RX_MSP)
         Indicate the type of protocol used to send receiver commands
         Current flight control board firmware does not provide complete
@@ -61,7 +64,7 @@ class MultiWii(object):
         Current flight control board firmware does not provide information on
         firmware itself so the user must provide this information for now...
     """
-    def __init__(self, port="/dev/ttyUSB0",
+    def __init__(self, port="/dev/ttyUSB0", bitrate=115200,
                  rx_protocol=msp.RX_MSP, firmware=msp.FIRMWARE_BF):
 
         assert rx_protocol in msp.RX_OPTIONS, (
@@ -78,7 +81,7 @@ class MultiWii(object):
 
         self.ser = serial.Serial()
         self.ser.port = port
-        self.ser.baudrate = 115200
+        self.ser.baudrate = bitrate
         self.ser.bytesize = serial.EIGHTBITS
         self.ser.parity = serial.PARITY_NONE
         self.ser.stopbits = serial.STOPBITS_ONE
@@ -288,40 +291,6 @@ def get_rx_config(mw):
         "fpvCamAngleDegrees" : data[13],
     }
     return ret
-
-def arm(mw):
-    """Arms the motors
-
-    Inputs
-    ------
-    mw: an instance of MultiWii
-    """
-    timer = 0
-    start = time.time()
-    while timer < 0.5:
-        data = [1500, 1500, 2000, 1000]
-        msg = msp.MSP_SET_RAW_RC
-        mw.send_msg(8, msg, data, MSP_PAYLOAD_FMT[msg])
-        time.sleep(0.05)
-        timer = timer + (time.time() - start)
-        start = time.time()
-
-def disarm(mw):
-    """Disarms the motors
-
-    Inputs
-    ------
-    mw: an instance of MultiWii
-    """
-    timer = 0
-    start = time.time()
-    while timer < 0.5:
-        data = [1500, 1500, 1000, 1000]
-        msg = msp.MSP_SET_RAW_RC
-        mw.send_msg(8, msg, data, MSP_PAYLOAD_FMT[msg])
-        time.sleep(0.05)
-        timer = timer + (time.time() - start)
-        start = time.time()
 
 def get_status(mw):
     """Get the flight control board status

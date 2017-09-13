@@ -23,7 +23,7 @@ time.sleep(0.1)
 
 print("getting motor")
 print(msp.get_motor(mw))
-for n in range(100):
+for n in range(10):
     for motor_value in [100*i for i in range(10,21)]:
         print("setting motor_value to %d"%motor_value)
         msp.set_motor(mw, [motor_value for i in range(4)])
@@ -33,7 +33,7 @@ for n in range(100):
 
 print("getting rc")
 print(msp.get_rc(mw))
-for n in range(100):
+for n in range(10):
     for rc_value in [100*i for i in range(10,21)]:
         print("setting rc to %d"%rc_value)
         msp.set_rc(mw, [rc_value for i in range(6)])
@@ -42,7 +42,7 @@ for n in range(100):
     print()
     
 print("getting imu")
-print(msp.get_raw_imu(mw))
-time.sleep(0.1)
+for n in range(10):
+    print(msp.get_raw_imu(mw))
 
 mw.close_serial()
