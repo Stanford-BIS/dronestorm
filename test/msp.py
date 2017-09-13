@@ -1,4 +1,5 @@
 # test the MultiWii Serial Protocol communication
+from __future__ import print_function
 import dronestorm.comm as comm
 from dronestorm.comm import MultiWii, msp
 from dronestorm.comm.msp.msp_types import (
@@ -19,7 +20,6 @@ print()
 print("getting status")
 pprint(msp.get_status(mw))
 print()
-time.sleep(0.1)
 
 print("getting motor")
 print(msp.get_motor(mw))
