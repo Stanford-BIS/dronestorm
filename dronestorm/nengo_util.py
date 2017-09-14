@@ -19,12 +19,12 @@ def _print_run_nengo_realtime_stats(
     dt_median = np.median(dt_measured)
     dt_std = np.std(dt_measured)
 
-    print(dt_measured)
     print("target dt: %fs"%dt_target)
     print("measured dt (N=%d) mean:%fs median:%fs std:%fs std/mean:%f"%(
         n_samples, dt_mean, dt_median, dt_std, dt_std/dt_mean))
 
-def run_nengo_realtime(nengo_sim, sim_stop_time=None):
+def run_nengo_realtime(
+        nengo_sim, sim_stop_time=None, report_runtime_stats=True):
     """Runs a nengo simulation in as close to real time as possible
 
     If a simulation step runs faster than real time, throttle
@@ -39,8 +39,12 @@ def run_nengo_realtime(nengo_sim, sim_stop_time=None):
     nengo_sim: nengo.Simulator instance
         simulator to run
 
-    sim_stop_time : None or float
-        stop time of the simulator
+    sim_stop_time: None or float
+        stop time of the simulator.
+        if None, will run until interrupted, for example, with a ctrl-c
+    
+    report_runtime_stats : bool
+        whether to print out the runtime stats after the simulation ends
     """
     assert isinstance(nengo_sim, nengo.Simulator), (
         "must pass in a nengo.Simulator instance to run_nengo_realtime")
