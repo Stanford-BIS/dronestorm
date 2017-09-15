@@ -7,7 +7,7 @@ from dronestorm.nengo_util import run_nengo_realtime
 
 SIM_TIME = 1
 
-for nneurons in [20, 50, 100, 200, 500, 1000, 2000, 5000]:
+for nneurons in [20, 50, 100, 200, 500, 1000, 2000]:
     print("benchmarking %d neuron network..."%(nneurons))
     start = time.time()
     net = nengo.Network()

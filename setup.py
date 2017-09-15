@@ -41,6 +41,7 @@ setup(
         'pigpio>=1.35',
         'adafruit-pca9685>=1.0',
         'numpy>=1.7',
+        'nengo>=2.4.0',
     ],
     # test_suite='nose.collector',
     # tests_require=['nose', 'nose-cover3'],
