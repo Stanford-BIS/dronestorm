@@ -42,6 +42,7 @@ setup(
         'adafruit-pca9685>=1.0',
         'numpy>=1.7',
         'nengo>=2.4.0',
+        'redis>=2.10.6',
     ],
     # test_suite='nose.collector',
     # tests_require=['nose', 'nose-cover3'],
