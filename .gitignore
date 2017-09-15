@@ -108,4 +108,4 @@ ENV/
 # random files
 *scratch.py
 **.txt
-
+**.cfg
