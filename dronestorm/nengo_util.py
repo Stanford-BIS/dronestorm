@@ -4,6 +4,10 @@ import time
 import nengo
 import numpy as np
 
+# minimum sleep accurately implemented by the OS and hardware
+# determine using benchmark/benchmark_sleep.py
+MIN_SLEEP = 0.001
+
 def _print_run_nengo_realtime_stats(
         dt_target, dt_measured, dt_measured_full, idx):
     """Print the runtime stats of a run_nengo_realtime simulation"""
@@ -24,7 +28,7 @@ def _print_run_nengo_realtime_stats(
         n_samples, dt_mean, dt_median, dt_std, dt_std/dt_mean))
 
 def run_nengo_realtime(
-        nengo_sim, sim_stop_time=None, report_runtime_stats=True):
+        nengo_sim, sim_stop_time=None, print_runtime_stats=True):
     """Runs a nengo simulation in as close to real time as possible
 
     If a simulation step runs faster than real time, throttle
@@ -42,8 +46,8 @@ def run_nengo_realtime(
     sim_stop_time: None or float
         stop time of the simulator.
         if None, will run until interrupted, for example, with a ctrl-c
-    
-    report_runtime_stats : bool
+
+    print_runtime_stats : bool
         whether to print out the runtime stats after the simulation ends
     """
     assert isinstance(nengo_sim, nengo.Simulator), (
@@ -57,7 +61,7 @@ def run_nengo_realtime(
     dt_target = nengo_sim.dt
     n_dt_samples = 100
     dt_measured = np.zeros(n_dt_samples)
-    ddt = 0 # dt_measured - dt_target
+    ddt = 0 # accumulation of dt_measured - dt_target
 
     idx = 0
     dt_measured_full = False
@@ -68,15 +72,15 @@ def run_nengo_realtime(
         while t_cur < t_stop or sim_stop_time is None:
             start = time.time()
 
-            if ddt < 0:
+            if ddt >= MIN_SLEEP:
+                time.sleep(ddt)
                 ddt = 0
-            time.sleep(ddt)
 
             nengo_sim.step()
 
             t_cur += dt_target
             dt_measured[idx] = time.time() - start
-            ddt = dt_target - dt_measured[idx]
+            ddt += dt_target - dt_measured[idx]
 
             idx += 1
             dt_measured_full = dt_measured_full | (idx == n_dt_samples)
@@ -85,5 +89,6 @@ def run_nengo_realtime(
     except KeyboardInterrupt:
         print("keyboard interrupt detected; ending simulation")
 
-    _print_run_nengo_realtime_stats(
-        dt_target, dt_measured, dt_measured_full, idx)
+    if print_runtime_stats:
+        _print_run_nengo_realtime_stats(
+            dt_target, dt_measured, dt_measured_full, idx)

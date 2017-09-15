@@ -5,7 +5,6 @@ Run this benchmark to determine the capacity of your system
 """
 import time
 import numpy as np
-import matplotlib.pyplot as plt
 
 def time_sleep(amount):
     """time the runtime of sleep"""
@@ -28,8 +27,9 @@ def benchmark_sleep(min_sleep, max_sleep, n_trials):
 
 def plot_data(tgt_sleep, measured_sleep):
     """plot the benchmark data"""
+    import matplotlib.pyplot as plt
     fig = plt.figure()
-    ax = fig.subplots(1,1)
+    ax = fig.subplots(1, 1)
     min_sleep = np.min([tgt_sleep, measured_sleep])
     max_sleep = np.max([tgt_sleep, measured_sleep])
     ax.loglog(tgt_sleep, measured_sleep, 'o')
@@ -51,10 +51,11 @@ def run_benchmark(min_sleep=1E-6, max_sleep=1E-1, n_trials=100,
 def load_and_plot_data(fname):
     """load data from fname and plot it"""
     data = np.loadtxt(fname)
-    tgt_sleep = data[:,0]
-    measured_sleep = data[:,1]
+    tgt_sleep = data[:, 0]
+    measured_sleep = data[:, 1]
     plot_data(tgt_sleep, measured_sleep)
 
 if __name__ == "__main__":
-    run_benchmark(save="benchmark_sleep_data.txt")
+    run_benchmark()
+    # run_benchmark(save="benchmark_sleep_data.txt")
     # load_and_plot_data("benchmark_sleep_data.txt")
