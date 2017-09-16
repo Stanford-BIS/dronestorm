@@ -53,6 +53,7 @@ class DBRedis(object):
         Beware that the redis database is accessible by any process,
         so it's good practice to designate a single process to control reset
         """
+        self.rdb.flush()
         # IMU data
         self.rdb.set(REDIS_IMU_DROLL, 0)
         self.rdb.set(REDIS_IMU_DPITCH, 0)
