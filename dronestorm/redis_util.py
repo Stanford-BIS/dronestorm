@@ -19,12 +19,14 @@ REDIS_IMU_DYAW = "IMU_YAW"
 REDIS_IMU_DDX = "IMU_X"
 REDIS_IMU_DDY = "IMU_Y"
 REDIS_IMU_DDZ = "IMU_Z"
+REDIS_IMU_CHANNEL = "IMU"
 
 # Commands
 # We send roll pitch yaw rates to the flight control board
 REDIS_CMD_DROLL = "CMD_DROLL"
 REDIS_CMD_DPITCH = "CMD_DPITCH"
 REDIS_CMD_DYAW = "CMD_DYAW"
+REDIS_CMD_CHANNEL = "CMD"
 
 # Sonar data
 # downwards facing sonar provides height off ground
@@ -32,9 +34,13 @@ REDIS_CMD_DYAW = "CMD_DYAW"
 REDIS_SONAR_DOWN = "SONAR_DOWN"
 REDIS_SONAR_FRONT = "SONAR_FRONT"
 REDIS_SONAR_BACK = "SONAR_BACK"
+REDIS_SONAR_CHANNEL = "SONAR"
 
 class DBRedis(object):
     """Class to set and get redis data
+
+    For IMU, CMD, and SONAR data, provides pipelined functions
+    for faster execution and publisher/subscriber notifications of new data
 
     Parameters
     ----------
@@ -122,7 +128,7 @@ class DBRedis(object):
         self.rdb.set(key, value)
 
     def set_imu(self, imu_data):
-        """Set the IMU data
+        """Set the IMU data and notify REDIS_IMU subscribers of new data
 
         Inputs
         ------
@@ -136,9 +142,10 @@ class DBRedis(object):
         self.rdb_pipe.set(REDIS_IMU_DDY, imu_data[4])
         self.rdb_pipe.set(REDIS_IMU_DDZ, imu_data[5])
         self.rdb_pipe.execute()
+        self.rdb.publish(REDIS_IMU_CHANNEL, 1)
 
     def set_cmd(self, cmd_data):
-        """Set the Command data
+        """Set the Command data and notify REDIS_CMD subscribers of new data
 
         Inputs
         ------
@@ -149,9 +156,10 @@ class DBRedis(object):
         self.rdb_pipe.set(REDIS_CMD_DPITCH, cmd_data[1])
         self.rdb_pipe.set(REDIS_CMD_DYAW, cmd_data[2])
         self.rdb_pipe.execute()
+        self.rdb.publish(REDIS_CMD_CHANNEL, 1)
 
     def set_sonar(self, sonar_data):
-        """Set the Sonar data
+        """Set the Sonar data and notify REDIS_SONAR subscribers of new data
 
         Inputs
         ------
@@ -162,3 +170,4 @@ class DBRedis(object):
         self.rdb_pipe.set(REDIS_SONAR_FRONT, sonar_data[1])
         self.rdb_pipe.set(REDIS_SONAR_BACK, sonar_data[2])
         self.rdb_pipe.execute()
+        self.rdb.publish(REDIS_SONAR_CHANNEL, 1)
