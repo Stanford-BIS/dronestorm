@@ -64,7 +64,7 @@ class MultiWii(object):
         Current flight control board firmware does not provide information on
         firmware itself so the user must provide this information for now...
     """
-    def __init__(self, port="/dev/ttyUSB0", bitrate=115200,
+    def __init__(self, port="/dev/ttyACM0", bitrate=115200,
                  rx_protocol=msp.RX_MSP, firmware=msp.FIRMWARE_BF):
 
         assert rx_protocol in msp.RX_OPTIONS, (

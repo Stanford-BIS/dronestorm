@@ -21,11 +21,24 @@ REDIS_IMU_DDY = "IMU_Y"
 REDIS_IMU_DDZ = "IMU_Z"
 REDIS_IMU_CHANNEL = "IMU"
 
+# RX inputs
+# We receive roll pitch yaw throttle aux1 aux2 from the rc receiver
+REDIS_RX_DROLL = "RX_DROLL"
+REDIS_RX_DPITCH = "RX_DPITCH"
+REDIS_RX_DYAW = "RX_DYAW"
+REDIS_RX_THROTTLE = "RX_THROTTLE"
+REDIS_RX_AUX1 = "RX_AUX1"
+REDIS_RX_AUX2 = "RX_AUX2"
+REDIS_RX_CHANNEL = "RX"
+
 # Commands
-# We send roll pitch yaw rates to the flight control board
+# We send roll pitch yaw aux1 aux2 to the flight control board
 REDIS_CMD_DROLL = "CMD_DROLL"
 REDIS_CMD_DPITCH = "CMD_DPITCH"
 REDIS_CMD_DYAW = "CMD_DYAW"
+REDIS_CMD_THROTTLE = "CMD_THROTTLE"
+REDIS_CMD_AUX1 = "CMD_AUX1"
+REDIS_CMD_AUX2 = "CMD_AUX2"
 REDIS_CMD_CHANNEL = "CMD"
 
 # Sonar data
@@ -59,7 +72,6 @@ class DBRedis(object):
         Beware that the redis database is accessible by any process,
         so it's good practice to designate a single process to control reset
         """
-        self.rdb.flush()
         # IMU data
         self.rdb.set(REDIS_IMU_DROLL, 0)
         self.rdb.set(REDIS_IMU_DPITCH, 0)
@@ -67,14 +79,30 @@ class DBRedis(object):
         self.rdb.set(REDIS_IMU_DDX, 0)
         self.rdb.set(REDIS_IMU_DDY, 0)
         self.rdb.set(REDIS_IMU_DDZ, 0)
+        # RX data 
+        self.rdb.set(REDIS_RX_DROLL, 0)
+        self.rdb.set(REDIS_RX_DPITCH, 0)
+        self.rdb.set(REDIS_RX_DYAW, 0)
+        self.rdb.set(REDIS_RX_THROTTLE, 0)
+        self.rdb.set(REDIS_RX_AUX1, 0)
+        self.rdb.set(REDIS_RX_AUX2, 0)
         # Commands
         self.rdb.set(REDIS_CMD_DROLL, 0)
         self.rdb.set(REDIS_CMD_DPITCH, 0)
         self.rdb.set(REDIS_CMD_DYAW, 0)
+        self.rdb.set(REDIS_CMD_THROTTLE, 0)
+        self.rdb.set(REDIS_CMD_AUX1, 0)
+        self.rdb.set(REDIS_CMD_AUX2, 0)
         # Sonar data
         self.rdb.set(REDIS_SONAR_DOWN, 0)
         self.rdb.set(REDIS_SONAR_FRONT, 0)
         self.rdb.set(REDIS_SONAR_BACK, 0)
+
+    def subscribe(self, chan):
+        """create a pubsub object subscribed to chan"""
+        pubsub = self.rdb.pubsub(ignore_subscribe_messages=True)
+        pubsub.subscribe(chan)
+        return pubsub
 
     def get_int(self, key):
         """Get data from the redis database and cast it to an int"""
@@ -99,15 +127,33 @@ class DBRedis(object):
         imu_dat = self.rdb_pipe.execute()
         return list(map(int, imu_dat))
 
+    def get_rx(self):
+        """Get the Receiver data
+
+        Returns the list of receiver data
+            [droll, dpitch, dyaw, throttle, aux1, aux2]
+        """
+        self.rdb_pipe.get(REDIS_RX_DROLL)
+        self.rdb_pipe.get(REDIS_RX_DPITCH)
+        self.rdb_pipe.get(REDIS_RX_DYAW)
+        self.rdb_pipe.get(REDIS_RX_THROTTLE)
+        self.rdb_pipe.get(REDIS_RX_AUX1)
+        self.rdb_pipe.get(REDIS_RX_AUX2)
+        rx_data = self.rdb_pipe.execute()
+        return list(map(int, rx_data))
+
     def get_cmd(self):
         """Get the Command data
 
         Returns the list of command data
-            [droll, dpitch, dyaw]
+            [droll, dpitch, dyaw, throttle, aux1, aux2]
         """
         self.rdb_pipe.get(REDIS_CMD_DROLL)
         self.rdb_pipe.get(REDIS_CMD_DPITCH)
         self.rdb_pipe.get(REDIS_CMD_DYAW)
+        self.rdb_pipe.get(REDIS_CMD_THROTTLE)
+        self.rdb_pipe.get(REDIS_CMD_AUX1)
+        self.rdb_pipe.get(REDIS_CMD_AUX2)
         cmd_data = self.rdb_pipe.execute()
         return list(map(int, cmd_data))
 
@@ -135,6 +181,7 @@ class DBRedis(object):
         imu_data : list of ints
             [droll, dpitch, dyaw, ddx, ddy, ddz]
         """
+        assert len(imu_data) == 6, "imu_data must be list of 6 ints"
         self.rdb_pipe.set(REDIS_IMU_DROLL, imu_data[0])
         self.rdb_pipe.set(REDIS_IMU_DPITCH, imu_data[1])
         self.rdb_pipe.set(REDIS_IMU_DYAW, imu_data[2])
@@ -144,6 +191,24 @@ class DBRedis(object):
         self.rdb_pipe.execute()
         self.rdb.publish(REDIS_IMU_CHANNEL, 1)
 
+    def set_rx(self, rx_data):
+        """Set the RX data and notify REDIS_RX subscribers of new data
+
+        Inputs
+        ------
+        cmd_data : list of ints
+            [droll, dpitch, dyaw]
+        """
+        assert len(rx_data) == 6, "rx_data must be list of 6 ints"
+        self.rdb_pipe.set(REDIS_RX_DROLL, rx_data[0])
+        self.rdb_pipe.set(REDIS_RX_DPITCH, rx_data[1])
+        self.rdb_pipe.set(REDIS_RX_DYAW, rx_data[2])
+        self.rdb_pipe.set(REDIS_RX_THROTTLE, rx_data[3])
+        self.rdb_pipe.set(REDIS_RX_AUX1, rx_data[4])
+        self.rdb_pipe.set(REDIS_RX_AUX2, rx_data[5])
+        self.rdb_pipe.execute()
+        self.rdb.publish(REDIS_RX_CHANNEL, 1)
+
     def set_cmd(self, cmd_data):
         """Set the Command data and notify REDIS_CMD subscribers of new data
 
@@ -152,9 +217,13 @@ class DBRedis(object):
         cmd_data : list of ints
             [droll, dpitch, dyaw]
         """
+        assert len(cmd_data) == 6, "cmd_data must be list of 6 ints"
         self.rdb_pipe.set(REDIS_CMD_DROLL, cmd_data[0])
         self.rdb_pipe.set(REDIS_CMD_DPITCH, cmd_data[1])
         self.rdb_pipe.set(REDIS_CMD_DYAW, cmd_data[2])
+        self.rdb_pipe.set(REDIS_CMD_THROTTLE, cmd_data[3])
+        self.rdb_pipe.set(REDIS_CMD_AUX1, cmd_data[4])
+        self.rdb_pipe.set(REDIS_CMD_AUX2, cmd_data[5])
         self.rdb_pipe.execute()
         self.rdb.publish(REDIS_CMD_CHANNEL, 1)
 
