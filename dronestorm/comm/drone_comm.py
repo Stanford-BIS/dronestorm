@@ -5,281 +5,257 @@ Transmits attitude commands: roll, pitch, yaw
 """
 from __future__ import division
 from __future__ import print_function
-import Adafruit_PCA9685
-from .msp import MultiWii, get_attitude, get_raw_imu
+import numpy as np
+from . import msp
+
+# Range of Values (historically Pulse Width of PWM): 1000us to 2000us
+MIN_RC_VALUE = 1000
+MID_RC_VALUE = 1500
+MAX_RC_VALUE = 2000
+RC_RANGE = MAX_RC_VALUE - MIN_RC_VALUE
+RC_HALF_RANGE = RC_RANGE/2
 
 class DroneComm(object):
-    """Handles communication to and from the drone.
+    """Handles communication to and from the flight control board.
 
-    Receives data over the USB with Multiwii protocol
-    Transmits data via an I2C interface to an Adafruit PWM generator
+    Transmits and Receives data over the USB with Multiwii protocol
 
     Paramters
     ---------
-    pwm_ctrl: bool
-        enable pwm control (default True)
-    period: float
-        pwm period (default 22ms)
-    k_period: float
-        pwm period calibration factor
-    roll_pwm_trim: int
+    roll_trim: int
         roll channel trim (us)
-    pitch_pwm_trim: int
+    pitch_rim: int
         pitch channel trim (us)
-    yaw_pwm_trim: int
+    yaw_trim: int
         yaw channel trim (us)
     port: string
         usb port attached to flight control board (default "/dev/ttyUSB0")
         if None, assumes no input connection from flight control board
     """
-    # Range of Values (Pulse Width): 1.1ms -> 1.9ms
-    MIN_WIDTH = 0.0011
-    MID_WIDTH = 0.0015
-    MAX_WIDTH = 0.0019
-
-    # Max change in pulse width from mid posision: 0.4ms
-    MAX_DELTA_PWIDTH = 0.0004
-
-    # time precision of feather pwm signal
-    # each pwm cycle is divided into TICKS units of time
-    TICKS = 4096
-
-    # Featherboard channel map
-    ROLL_CHANNEL = 3
-    PITCH_CHANNEL = 2
-    YAW_CHANNEL = 1
-    THR_CHANNEL = 0
-
-    # Calibration factor to compensate for mismatch between
-    # requested pwm period and pwm freq implemented by Adafruit PWM generator
-    # Useage:
-    #     requested_period = K_PWM * target_period
-    # when requesting a PWM signal with period target_period
-    DEFAULT_K_PERIOD = 0.023 / 0.022 # 23ms/22ms
-
-    def __init__(
-            self, pwm_ctrl=True,
-            period=0.022, k_period=None,
-            roll_trim=0, pitch_trim=0, yaw_trim=0,
-            port="/dev/ttyUSB0"):
-        self.period = period
-
-        # store trims in units of seconds
+    def __init__(self, roll_trim=0, pitch_trim=0, yaw_trim=0,
+                 port="/dev/ttyACM0"):
         self.trim = {
-            'roll':roll_trim * 1E-6,
-            'pitch':pitch_trim * 1E-6,
-            'yaw':yaw_trim * 1E-6
+            'roll':roll_trim,
+            'pitch':pitch_trim,
+            'yaw':yaw_trim,
         }
 
         self.attitude = {'roll':0, 'ptich':0, 'yaw':0}
         self.imu = {
             'ax':0, 'ay':0, 'az':0,
-            'droll':0, 'dpitch':0, 'dyaw':0,
-            'mx':0, 'my':0, 'mz':0}
+            'droll':0, 'dpitch':0, 'dyaw':0,}
 
-        if k_period is None:
-            k_period = self.DEFAULT_K_PERIOD
+        # rc signals
+        # roll, pitch, yaw, throttle, aux1, aux2
+        self.rc_data = [MID_RC_VALUE]*3 + [MIN_RC_VALUE]*3
+        self.mw_comm = msp.MultiWii(port)
+        self.send_rc(self.rc_data)
 
-        if pwm_ctrl:
-            self.pwm = Adafruit_PCA9685.PCA9685()
-            self.pwm.set_pwm_freq(1./(k_period*period))
-            self.reset_channels()
-        else:
-            self.pwm = None
-
-        if port is None:
-            self.board = None
-        else:
-            self.board = MultiWii(port)
-
-    def reset_channels(self):
-        """Reset channels 0-6 on the feather board
-
-        Applies trim to roll/pitch/yaw channels
-        """
-        for i in range(6):
-            self.set_pwidth(i, self.MID_WIDTH)
-        self.set_pwidth(
-            self.ROLL_CHANNEL, self.MID_WIDTH + self.trim['roll'])
-        self.set_pwidth(
-            self.PITCH_CHANNEL, self.MID_WIDTH + self.trim['pitch'])
-        self.set_pwidth(
-            self.YAW_CHANNEL, self.MID_WIDTH + self.trim['yaw'])
-
-    def set_pwidth(self, channel, width):
-        """Set a positive Pulse Width on a channel
-
-        Parameters
-        ----------
-        channel: int
-            pwm channel to set positive pulse width
-        width: float
-            positive pulse width (seconds)
-        """
-        width = width / self.period * self.TICKS
-        pulse = int(round(width))
-        self.pwm.set_pwm(channel, 0, pulse)
-
-    def set_roll_pwidth(self, width):
-        """Apply trim and set the pwm Roll signal's positive pulse width
-
-        Parameters
-        ----------
-        width: float
-            positive pulse width (seconds)
-        """
-        # apply trim offset
-        width += self.trim['roll']
-        width, valid = self.validate_pwidth(width)
-        self.set_pwidth(self.ROLL_CHANNEL, width)
-        if not valid:
-            print("WARNING: Requested roll pwidth out of range!")
-
-    def set_pitch_pwidth(self, width):
-        """Apply trim and set the pwm Pitch signal's positive pulse width
-
-        Parameters
-        ----------
-        width: float
-            positive pulse width (seconds)
-        """
-        # apply trim offset
-        width += self.trim['pitch']
-        width, valid = self.validate_pwidth(width)
-        self.set_pwidth(self.PITCH_CHANNEL, width)
-        if not valid:
-            print("WARNING: Requested pitch pwidth out of range!")
-
-    def set_yaw_pwidth(self, width):
-        """Apply trim and set the pwm Yaw signal's positive pulse width
-
-        Parameters
-        ----------
-        width: float
-            positive pulse width (seconds)
-        """
-        # apply trim offset
-        width += self.trim['yaw']
-        width, valid = self.validate_pwidth(width)
-        self.set_pwidth(self.YAW_CHANNEL, width)
-        if not valid:
-            print("WARNING: Requested yaw pwidth out of range!")
-
-    def set_thr_pwidth(self, width):
-        """Apply trim and set the pwm Throttle signal's positive pulse width
-
-        Parameters
-        ----------
-        width: float
-            positive pulse width (seconds)
-        """
-        # apply trim offset
-        valid = True
-        if width > self.MAX_WIDTH:
-            valid = False
-            width = self.MAX_WIDTH
-
-        self.set_pwidth(self.THR_CHANNEL, width)
-        if not valid:
-            print("WARNING: Requested thr pwidth out of range!")
-
-    def validate_pwidth(self, width):
-        """Validate the pwm signal's positive pulse width
-
-        Checks that the width is within the accepted range
-        If not, the MAX_WIDTH or MIN_WIDTH is returned
-        """
-        if width > self.MAX_WIDTH:
-            return self.MAX_WIDTH, False
-        elif width < self.MIN_WIDTH:
-            return self.MIN_WIDTH, False
-        else:
-            return width, True
-
-    def set_roll_rate(self, rate):
-        """Set the Roll rate
-
-        Parameters
-        ----------
-        width: float [-1, 1]
-            rate (scaled by max rate)
-        """
-        rate, valid = self.validate_rate(rate)
-        width = (
-            self.MID_WIDTH + self.trim['roll'] + rate*self.MAX_DELTA_PWIDTH)
-        self.set_pwidth(self.ROLL_CHANNEL, width)
-        if not valid:
-            print("WARNING: Requested roll rate out of range!")
-
-    def set_pitch_rate(self, rate):
-        """Set the Pitch rate
-
-        Parameters
-        ----------
-        width: float [-1, 1]
-            rate (scaled by max rate)
-        """
-        rate, valid = self.validate_rate(rate)
-        width = (
-            self.MID_WIDTH + self.trim['pitch'] + rate*self.MAX_DELTA_PWIDTH)
-        self.set_pwidth(self.PITCH_CHANNEL, width)
-        if not valid:
-            print("WARNING: Requested pitch rate out of range!")
-
-    def set_yaw_rate(self, rate):
-        """Set the Yaw rate
-
-        Parameters
-        ----------
-        width: float [-1, 1]
-            rate (scaled by max rate)
-        """
-        rate, valid = self.validate_rate(rate)
-        width = (
-            self.MID_WIDTH + self.trim['yaw'] + rate*self.MAX_DELTA_PWIDTH)
-        self.set_pwidth(self.YAW_CHANNEL, width)
-        if not valid:
-            print("WARNING: Requested yaw rate out of range!")
-
-    @staticmethod
-    def validate_rate(rate):
-        """Validate the requested channel rate is valid
-
-        Checks that the width is within [-1, 1]
-        Clips to range limit
-        """
-        if rate > 1:
-            return 1, False
-        elif rate < -1:
-            return -1, False
-        else:
-            return rate, True
+    def send_rc(self, rc_data):
+        """Send RC data to the flight control board"""
+        msp.set_rc(self.mw_comm, rc_data)
 
     def update_attitude(self):
         """Update the attitude data from the flight controller"""
-        data = get_attitude(self.board)
+        data = msp.get_attitude(self.mw_comm)
         self.attitude['roll'] = data[0]
         self.attitude['pitch'] = data[1]
         self.attitude['yaw'] = data[2]
 
     def update_imu(self):
         """Updates the IMU data from the flight controller"""
-        data = get_raw_imu(self.board)
+        data = msp.get_raw_imu(self.mw_comm)
         self.imu['ax'] = data[0]
         self.imu['ay'] = data[1]
         self.imu['az'] = data[2]
         self.imu['droll'] = data[3]
         self.imu['dpitch'] = data[4]
         self.imu['dyaw'] = data[5]
-        self.imu['mx'] = data[6]
-        self.imu['my'] = data[7]
-        self.imu['mz'] = data[8]
 
     def exit(self):
         """
         Used to gracefully exit and close the serial port
         """
-        if self.pwm is not None:
-            self.reset_channels()
-        if self.board is not None:
-            self.board.close_serial()
+        self.mw_comm.close_serial()
+
+# setters & getters in RC units ###############################################
+def set_roll_rate_rc(drone_comm, roll_rate):
+    """Apply trim and set the roll rate in RC units
+
+    Inputs
+    ------
+    drone_comm: instance of DroneComm
+    roll_rate: int [1000, 2000]
+        RC units of roll rate.
+        RC units historically PWM positive pulse width in microseconds
+    """
+    drone_comm.rc[0] = np.clip(
+        roll_rate + drone_comm.trim['roll'], MIN_RC_VALUE, MAX_RC_VALUE)
+
+def set_pitch_rate_rc(drone_comm, pitch_rate):
+    """Apply trim and set the pitch rate in RC units
+
+    Inputs
+    ------
+    drone_comm: instance of DroneComm
+    pitch_rate: int [1000, 2000]
+        RC units of pitch rate.
+        RC units historically PWM positive pulse width in microseconds
+    """
+    drone_comm.rc[1] = np.clip(
+        pitch_rate + drone_comm.trim['pitch'], MIN_RC_VALUE, MAX_RC_VALUE)
+
+def set_yaw_rate_rc(drone_comm, yaw_rate):
+    """Apply trim and set the yaw rate in RC units
+
+    Inputs
+    ------
+    drone_comm: instance of DroneComm
+    yaw_rate: int [1000, 2000]
+        RC units of yaw rate.
+        RC units historically PWM positive pulse width in microseconds
+    """
+    drone_comm.rc[2] = np.clip(
+        yaw_rate + drone_comm.trim['yaw'], MIN_RC_VALUE, MAX_RC_VALUE)
+
+def set_throttle_rc(drone_comm, throttle):
+    """Set the throttle in RC units
+
+    Inputs
+    ------
+    drone_comm: instance of DroneComm
+    throttle: int [1000, 2000]
+        RC units of throttle.
+        RC units historically PWM positive pulse width in microseconds
+    """
+    drone_comm.rc[3] = np.clip(
+        throttle, MIN_RC_VALUE, MAX_RC_VALUE)
+
+def set_aux1_rc(drone_comm, aux1):
+    """Set the AUX1 channel in RC units
+
+    Inputs
+    ------
+    drone_comm: instance of DroneComm
+    aux1: int [1000, 2000]
+        RC units of AUX1.
+        RC units historically PWM positive pulse width in microseconds
+    """
+    drone_comm.rc[4] = np.clip(
+        aux1, MIN_RC_VALUE, MAX_RC_VALUE)
+
+def set_aux2_rc(drone_comm, aux2):
+    """Apply trim and set the yaw rate in RC units
+
+    Inputs
+    ------
+    drone_comm: instance of DroneComm
+    aux2: int [1000, 2000]
+        RC units of AUX2.
+        RC units historically PWM positive pulse width in microseconds
+    """
+    drone_comm.rc[5] = np.clip(
+        aux2, MIN_RC_VALUE, MAX_RC_VALUE)
+
+# setters & getters in [-1,1] units ###########################################
+def validate_rate(rate, min_value=-1, max_value=1):
+    """Validates that rate is within [min_value, max_value]
+
+    Clips rates and returns whether rate was within range or not
+    """
+    if rate > max_value:
+        return max_value, False
+    elif rate < min_value:
+        return min_value, False
+    else:
+        return rate, True
+
+def set_roll_rate(drone_comm, rate):
+    """Set the roll rate
+
+    Parameters
+    ----------
+    drone_comm: instance of DroneComm
+    rate: float
+        roll rate normalized to [-1, 1]
+    """
+    rate, valid = validate_rate(rate)
+    rc_value = MID_RC_VALUE + rate*RC_HALF_RANGE
+    set_roll_rate_rc(drone_comm, rc_value)
+    if not valid:
+        print("WARNING: Requested roll rate out of range!")
+
+def set_pitch_rate(drone_comm, rate):
+    """Set the pitch rate
+
+    Parameters
+    ----------
+    drone_comm: instance of DroneComm
+    rate: float
+        pitch rate normalized to [-1, 1]
+    """
+    rate, valid = validate_rate(rate)
+    rc_value = MID_RC_VALUE + rate*RC_HALF_RANGE
+    set_pitch_rate_rc(drone_comm, rc_value)
+    if not valid:
+        print("WARNING: Requested pitch rate out of range!")
+
+def set_yaw_rate(drone_comm, rate):
+    """Set the yaw rate
+
+    Parameters
+    ----------
+    drone_comm: instance of DroneComm
+    rate: float
+        yaw rate normalized to [-1, 1]
+    """
+    rate, valid = validate_rate(rate)
+    rc_value = MID_RC_VALUE + rate*RC_HALF_RANGE
+    set_yaw_rate_rc(drone_comm, rc_value)
+    if not valid:
+        print("WARNING: Requested yaw rate out of range!")
+
+def set_throttle(drone_comm, rate):
+    """Set the throttle
+
+    Parameters
+    ----------
+    drone_comm: instance of DroneComm
+    rate: float
+        throttle normalized to [0, 1]
+    """
+    rate, valid = validate_rate(rate, min_value=0)
+    rc_value = MIN_RC_VALUE + rate*RC_RANGE
+    set_throttle_rc(drone_comm, rc_value)
+    if not valid:
+        print("WARNING: Requested throttle out of range!")
+
+def set_aux1(drone_comm, rate):
+    """Set the aux1
+
+    Parameters
+    ----------
+    drone_comm: instance of DroneComm
+    rate: float
+        AUX1 normalized to [0, 1]
+    """
+    rate, valid = validate_rate(rate, min_value=0)
+    rc_value = MIN_RC_VALUE + rate*RC_RANGE
+    set_aux1_rc(drone_comm, rc_value)
+    if not valid:
+        print("WARNING: Requested AUX1 out of range!")
+
+def set_aux2(drone_comm, rate):
+    """Set the aux2
+
+    Parameters
+    ----------
+    drone_comm: instance of DroneComm
+    rate: float
+        AUX2 normalized to [0, 1]
+    """
+    rate, valid = validate_rate(rate, min_value=0)
+    rc_value = MIN_RC_VALUE + rate*RC_RANGE
+    set_aux2_rc(drone_comm, rc_value)
+    if not valid:
+        print("WARNING: Requested AUX2 out of range!")

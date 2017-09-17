@@ -1,10 +1,10 @@
-"""This module communicates with the receiver during run time
+"""This module simply forwards redis rx data to the flight control board
 
 Reads rc data from redis database
 Writes data to the flight control board
 
 run from terminal with
-`python transmit_rc.py`
+`python forward_rx.py`
 """
 from __future__ import print_function
 import sys
@@ -12,7 +12,7 @@ from dronestorm.comm import MultiWii
 from dronestorm.comm import msp
 from dronestorm.redis_util import DBRedis, REDIS_RX_CHANNEL
 
-def transmit_rc():
+def forward_rx():
     """Function to forward rc commands to the flight control board"""
     db_redis = DBRedis()
     mw_comm = MultiWii()
@@ -34,4 +34,4 @@ def transmit_rc():
         mw_comm.close_serial()
 
 if __name__ == "__main__":
-    transmit_rc()
+    forward_rx()

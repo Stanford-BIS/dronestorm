@@ -400,9 +400,9 @@ def set_rc(mw, data):
     mw: an instance of MultiWii
     data: int or list of ints
         rc values to set
-        if list, can have up to the number of motors supported by the firmware
-            if fewer than the numbe of supported motors, the rest of the motors
-            will be set to midpoint values
+        if list, can have up to the number of channels
+            supported by the firmware if fewer than the number of supported
+            motors, the rest of the motors will be set to midpoint values
         if int, will set all motors to that value
     """
     msg = msp.MSP_SET_RAW_RC
