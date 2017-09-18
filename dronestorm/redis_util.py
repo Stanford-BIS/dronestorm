@@ -143,7 +143,7 @@ def get_imu(db_redis):
     return list(map(int, imu_dat))
 
 def get_rx(db_redis):
-    """Get the Receiver data
+    """Get the receiver data
 
     Returns the list of receiver data
         [droll, dpitch, dyaw, throttle, aux1, aux2]
@@ -154,6 +154,21 @@ def get_rx(db_redis):
     db_redis.rdb_pipe.get(REDIS_RX_THROTTLE)
     db_redis.rdb_pipe.get(REDIS_RX_AUX1)
     db_redis.rdb_pipe.get(REDIS_RX_AUX2)
+    rx_data = db_redis.rdb_pipe.execute()
+    return list(map(float, rx_data))
+
+def get_rx_rc(db_redis):
+    """Get the receiver data in RC units
+
+    Returns the list of receiver data
+        [droll, dpitch, dyaw, throttle, aux1, aux2]
+    """
+    db_redis.rdb_pipe.get(REDIS_RX_RC_DROLL)
+    db_redis.rdb_pipe.get(REDIS_RX_RC_DPITCH)
+    db_redis.rdb_pipe.get(REDIS_RX_RC_DYAW)
+    db_redis.rdb_pipe.get(REDIS_RX_RC_THROTTLE)
+    db_redis.rdb_pipe.get(REDIS_RX_RC_AUX1)
+    db_redis.rdb_pipe.get(REDIS_RX_RC_AUX2)
     rx_data = db_redis.rdb_pipe.execute()
     return list(map(int, rx_data))
 
@@ -189,7 +204,7 @@ def get_sonar(db_redis):
 ###############################################################################
 
 def set_attitude(db_redis, attitude_data):
-    """Set the attitude data and notify REDIS_IMU subscribers of new data
+    """Set the attitude data and notify REDIS_IMU subscribers
 
     Inputs
     ------
@@ -204,7 +219,7 @@ def set_attitude(db_redis, attitude_data):
     db_redis.rdb.publish(REDIS_ATTITUDE_CHANNEL, 1)
 
 def set_imu(db_redis, imu_data):
-    """Set the IMU data and notify REDIS_IMU subscribers of new data
+    """Set the IMU data and notify REDIS_IMU subscribers
 
     Inputs
     ------
@@ -222,7 +237,7 @@ def set_imu(db_redis, imu_data):
     db_redis.rdb.publish(REDIS_IMU_CHANNEL, 1)
 
 def set_rx(db_redis, rx_data):
-    """Set the RX data and notify REDIS_RX subscribers of new data
+    """Set the receiver and notify REDIS_RX subscribers
 
     Inputs
     ------
@@ -230,17 +245,17 @@ def set_rx(db_redis, rx_data):
         [throttle, droll, dpitch, dyaw, AUX1, AUX2]
     """
     assert len(rx_data) == 6, "rx_data must be list of 6 floats"
-    db_redis.rdb_pipe.set(REDIS_RX_THROTTLE, rx_data[0])
-    db_redis.rdb_pipe.set(REDIS_RX_DROLL, rx_data[1])
-    db_redis.rdb_pipe.set(REDIS_RX_DPITCH, rx_data[2])
-    db_redis.rdb_pipe.set(REDIS_RX_DYAW, rx_data[3])
+    db_redis.rdb_pipe.set(REDIS_RX_DROLL, rx_data[0])
+    db_redis.rdb_pipe.set(REDIS_RX_DPITCH, rx_data[1])
+    db_redis.rdb_pipe.set(REDIS_RX_DYAW, rx_data[2])
+    db_redis.rdb_pipe.set(REDIS_RX_THROTTLE, rx_data[3])
     db_redis.rdb_pipe.set(REDIS_RX_AUX1, rx_data[4])
     db_redis.rdb_pipe.set(REDIS_RX_AUX2, rx_data[5])
     db_redis.rdb_pipe.execute()
     db_redis.rdb.publish(REDIS_RX_CHANNEL, 1)
 
 def set_rx_rc(db_redis, rx_rc_data):
-    """Set the RX_RC data and notify REDIS_RX_RC subscribers of new data
+    """Set the receiver data in RC units and notify REDIS_RX_RC subscribers
 
     Inputs
     ------
@@ -248,10 +263,10 @@ def set_rx_rc(db_redis, rx_rc_data):
         [throttle, droll, dpitch, dyaw, AUX1, AUX2]
     """
     assert len(rx_rc_data) == 6, "rx_rc_data must be list of 6 ints"
-    db_redis.rdb_pipe.set(REDIS_RX_RC_THROTTLE, rx_rc_data[0])
-    db_redis.rdb_pipe.set(REDIS_RX_RC_DROLL, rx_rc_data[1])
-    db_redis.rdb_pipe.set(REDIS_RX_RC_DPITCH, rx_rc_data[2])
-    db_redis.rdb_pipe.set(REDIS_RX_RC_DYAW, rx_rc_data[3])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_DROLL, rx_rc_data[0])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_DPITCH, rx_rc_data[1])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_DYAW, rx_rc_data[2])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_THROTTLE, rx_rc_data[3])
     db_redis.rdb_pipe.set(REDIS_RX_RC_AUX1, rx_rc_data[4])
     db_redis.rdb_pipe.set(REDIS_RX_RC_AUX2, rx_rc_data[5])
     db_redis.rdb_pipe.execute()

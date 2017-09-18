@@ -9,8 +9,8 @@ run from terminal with
 from __future__ import print_function
 from dronestorm.comm import SpektrumRemoteReceiver
 from dronestorm.comm.rc_util import rx_rc_to_rx
-from dronestorm.redis_util import DBRedis
 from dronestorm.log_util import print_rx_rx_rc_header, print_rx_rx_rc_data
+from dronestorm.redis_util import DBRedis
 import dronestorm.redis_util as redis_util
 
 def receive_rx():
