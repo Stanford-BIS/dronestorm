@@ -48,6 +48,3 @@ def rx_rc_to_rx(rx_rc):
                      list(map(rc_to_range_2, rx_rc[1:4])) + 
                      list(map(rc_to_range_1, rx_rc[4:])))
     return rx_normalized
-
-
-

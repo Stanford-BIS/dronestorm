@@ -1,4 +1,4 @@
-"""Communicates between the flight control board and the redis database
+"""Communicate with flight control board and redis database during runtime
 
 Reads IMU data from the flight control board
 Writes IMU data to the redis database

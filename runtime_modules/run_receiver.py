@@ -1,10 +1,10 @@
-"""This module communicates with the receiver during run time
+"""communicates with the receiver during runtime
 
 Reads data from the serial port attached to the receiver
 Writes data to the redis database and notifies subscribers of new data
 
 run from terminal with
-`python receive_rx.py`
+`python run_receiver.py`
 """
 from __future__ import print_function
 from dronestorm.comm import SpektrumRemoteReceiver
@@ -13,7 +13,7 @@ from dronestorm.log_util import print_rx_rx_rc_header, print_rx_rx_rc_data
 from dronestorm.redis_util import DBRedis
 import dronestorm.redis_util as redis_util
 
-def receive_rx():
+def run_receiver():
     """Function to handles receiver communications"""
     db_redis = DBRedis()
     rx_comm = SpektrumRemoteReceiver()
@@ -33,4 +33,4 @@ def receive_rx():
         rx_comm.close_serial()
 
 if __name__ == "__main__":
-    receive_rx()
+    run_receiver()
