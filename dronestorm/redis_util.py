@@ -117,15 +117,36 @@ class DBRedis(object):
         self.rdb.set(REDIS_SONAR_FRONT, 0)
         self.rdb.set(REDIS_SONAR_BACK, 0)
 
-    def subscribe(self, chan):
-        """create a pubsub object subscribed to chan"""
+    def subscribe(self, chans):
+        """Create a pubsub object
+        
+        Inputs
+        ------
+        chans : string or list of strings
+            channel(s) to subscribe to
+        """
         pubsub = self.rdb.pubsub(ignore_subscribe_messages=True)
-        pubsub.subscribe(chan)
+        if not isinstance(chans, (list, tuple)):
+            chans = [chans]
+        for chan in chans:
+            pubsub.subscribe(chan)
         return pubsub
 
 ###############################################################################
 # getter utilities ############################################################
 ###############################################################################
+
+def get_attitude(db_redis):
+    """Get the attitude data
+
+    Returns the list of attitude data
+        [droll, dpitch, dyaw, ddx, ddy, ddz]
+    """
+    db_redis.rdb_pipe.get(REDIS_ATTITUDE_ROLL)
+    db_redis.rdb_pipe.get(REDIS_ATTITUDE_PITCH)
+    db_redis.rdb_pipe.get(REDIS_ATTITUDE_YAW)
+    imu_dat = db_redis.rdb_pipe.execute()
+    return list(map(int, imu_dat))
 
 def get_imu(db_redis):
     """Get the IMU data
@@ -160,7 +181,7 @@ def get_rx(db_redis):
 def get_rx_rc(db_redis):
     """Get the receiver data in RC units
 
-    Returns the list of receiver data
+    Returns the list of receiver data in RC units
         [droll, dpitch, dyaw, throttle, aux1, aux2]
     """
     db_redis.rdb_pipe.get(REDIS_RX_RC_DROLL)

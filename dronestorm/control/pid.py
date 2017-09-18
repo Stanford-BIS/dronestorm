@@ -42,7 +42,7 @@ class PID(object):
         If None, won't be used.
     """
     def __init__(
-            self, 
+            self,
             kp, kd, ki,
             get_state, get_dstate,
             get_ref, get_dref=None,
@@ -74,7 +74,7 @@ class PID(object):
     def step(self):
         """Update the control signal
 
-        Reads the current state and reference state and recomputes 
+        Reads the current state and reference state and recomputes
         the control signal
         """
         # get state and reference state
@@ -99,4 +99,3 @@ class PID(object):
             output = np.clip(output, -self.out_limit, self.out_limit)
 
         return output
-

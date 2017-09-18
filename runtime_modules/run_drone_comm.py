@@ -1,11 +1,5 @@
 """Communicate with flight control board and redis database during runtime
 
-Reads IMU data from the flight control board
-Writes IMU data to the redis database
-
-Reads command data (REDIS_CMD_*) from redis database
-Writes command data to the flight control board
-
 run from terminal with
 `python run_drone_comm.py`
 """
@@ -17,7 +11,14 @@ from dronestorm.redis_util import DBRedis
 import dronestorm.redis_util as redis_util
 
 def run_drone_comm():
-    """Function to forward rc commands to the flight control board"""
+    """Function to forward rc commands to the flight control board
+    
+    Reads IMU data from the flight control board
+    Writes IMU data to the redis database
+    
+    Reads command data (REDIS_CMD_*) from redis database
+    Writes command data to the flight control board
+    """
     db_redis = DBRedis()
     db_redis.reset_db()
     drone_comm = DroneComm()
