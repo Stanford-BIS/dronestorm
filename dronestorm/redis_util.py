@@ -10,6 +10,13 @@ and have the redis server up and running
 """
 import redis
 
+# ATTITUDE data
+# Flight control board computes attitude from gyro data
+REDIS_ATTITUDE_ROLL = "ATTITUDE_ROLL"
+REDIS_ATTITUDE_PITCH = "ATTITUDE_PITCH"
+REDIS_ATTITUDE_YAW = "ATTITUDE_YAW"
+REDIS_ATTITUDE_CHANNEL = "ATTITUDE"
+
 # IMU data
 # gyroscope provides roll pitch yaw rates,
 # accelerometer provides x y z accelerations
@@ -21,8 +28,20 @@ REDIS_IMU_DDY = "IMU_Y"
 REDIS_IMU_DDZ = "IMU_Z"
 REDIS_IMU_CHANNEL = "IMU"
 
-# RX inputs
-# We receive roll pitch yaw throttle aux1 aux2 from the rc receiver
+# RX inputs in RC units
+# We receive droll dpitch dyaw throttle aux1 aux2 from the rc receiver
+REDIS_RX_RC_DROLL = "RX_RC_DROLL"
+REDIS_RX_RC_DPITCH = "RX_RC_DPITCH"
+REDIS_RX_RC_DYAW = "RX_RC_DYAW"
+REDIS_RX_RC_THROTTLE = "RX_RC_THROTTLE"
+REDIS_RX_RC_AUX1 = "RX_RC_AUX1"
+REDIS_RX_RC_AUX2 = "RX_RC_AUX2"
+REDIS_RX_RC_CHANNEL = "RX_RC"
+
+# RX inputs normalized
+# We receive droll dpitch dyaw throttle aux1 aux2 from the rc receiver
+# droll, dpitch, dyaw normalized to [-1, 1]
+# throttle, AUX1, AUX2 normalized to [0, 1]
 REDIS_RX_DROLL = "RX_DROLL"
 REDIS_RX_DPITCH = "RX_DPITCH"
 REDIS_RX_DYAW = "RX_DYAW"
@@ -104,139 +123,150 @@ class DBRedis(object):
         pubsub.subscribe(chan)
         return pubsub
 
-    def get_int(self, key):
-        """Get data from the redis database and cast it to an int"""
-        return int(self.rdb.get(key))
+###############################################################################
+# getter utilities ############################################################
+###############################################################################
 
-    def get_float(self, key):
-        """Get data from the redis database and cast it to a float"""
-        return float(self.rdb.get(key))
+def get_imu(db_redis):
+    """Get the IMU data
 
-    def get_imu(self):
-        """Get the IMU data
+    Returns the list of imu data
+        [droll, dpitch, dyaw, ddx, ddy, ddz]
+    """
+    db_redis.rdb_pipe.get(REDIS_IMU_DROLL)
+    db_redis.rdb_pipe.get(REDIS_IMU_DPITCH)
+    db_redis.rdb_pipe.get(REDIS_IMU_DYAW)
+    db_redis.rdb_pipe.get(REDIS_IMU_DDX)
+    db_redis.rdb_pipe.get(REDIS_IMU_DDY)
+    db_redis.rdb_pipe.get(REDIS_IMU_DDZ)
+    imu_dat = db_redis.rdb_pipe.execute()
+    return list(map(int, imu_dat))
 
-        Returns the list of imu data
-            [droll, dpitch, dyaw, ddx, ddy, ddz]
-        """
-        self.rdb_pipe.get(REDIS_IMU_DROLL)
-        self.rdb_pipe.get(REDIS_IMU_DPITCH)
-        self.rdb_pipe.get(REDIS_IMU_DYAW)
-        self.rdb_pipe.get(REDIS_IMU_DDX)
-        self.rdb_pipe.get(REDIS_IMU_DDY)
-        self.rdb_pipe.get(REDIS_IMU_DDZ)
-        imu_dat = self.rdb_pipe.execute()
-        return list(map(int, imu_dat))
+def get_rx(db_redis):
+    """Get the Receiver data
 
-    def get_rx(self):
-        """Get the Receiver data
+    Returns the list of receiver data
+        [droll, dpitch, dyaw, throttle, aux1, aux2]
+    """
+    db_redis.rdb_pipe.get(REDIS_RX_DROLL)
+    db_redis.rdb_pipe.get(REDIS_RX_DPITCH)
+    db_redis.rdb_pipe.get(REDIS_RX_DYAW)
+    db_redis.rdb_pipe.get(REDIS_RX_THROTTLE)
+    db_redis.rdb_pipe.get(REDIS_RX_AUX1)
+    db_redis.rdb_pipe.get(REDIS_RX_AUX2)
+    rx_data = db_redis.rdb_pipe.execute()
+    return list(map(int, rx_data))
 
-        Returns the list of receiver data
-            [droll, dpitch, dyaw, throttle, aux1, aux2]
-        """
-        self.rdb_pipe.get(REDIS_RX_DROLL)
-        self.rdb_pipe.get(REDIS_RX_DPITCH)
-        self.rdb_pipe.get(REDIS_RX_DYAW)
-        self.rdb_pipe.get(REDIS_RX_THROTTLE)
-        self.rdb_pipe.get(REDIS_RX_AUX1)
-        self.rdb_pipe.get(REDIS_RX_AUX2)
-        rx_data = self.rdb_pipe.execute()
-        return list(map(int, rx_data))
+def get_cmd(db_redis):
+    """Get the Command data
 
-    def get_cmd(self):
-        """Get the Command data
+    Returns the list of command data
+        [droll, dpitch, dyaw, throttle, aux1, aux2]
+    """
+    db_redis.rdb_pipe.get(REDIS_CMD_DROLL)
+    db_redis.rdb_pipe.get(REDIS_CMD_DPITCH)
+    db_redis.rdb_pipe.get(REDIS_CMD_DYAW)
+    db_redis.rdb_pipe.get(REDIS_CMD_THROTTLE)
+    db_redis.rdb_pipe.get(REDIS_CMD_AUX1)
+    db_redis.rdb_pipe.get(REDIS_CMD_AUX2)
+    cmd_data = db_redis.rdb_pipe.execute()
+    return list(map(int, cmd_data))
 
-        Returns the list of command data
-            [droll, dpitch, dyaw, throttle, aux1, aux2]
-        """
-        self.rdb_pipe.get(REDIS_CMD_DROLL)
-        self.rdb_pipe.get(REDIS_CMD_DPITCH)
-        self.rdb_pipe.get(REDIS_CMD_DYAW)
-        self.rdb_pipe.get(REDIS_CMD_THROTTLE)
-        self.rdb_pipe.get(REDIS_CMD_AUX1)
-        self.rdb_pipe.get(REDIS_CMD_AUX2)
-        cmd_data = self.rdb_pipe.execute()
-        return list(map(int, cmd_data))
+def get_sonar(db_redis):
+    """Get the Sonar data
 
-    def get_sonar(self):
-        """Get the Sonar data
+    Returns the list of sonar data
+        [down, front, back]
+    """
+    db_redis.rdb_pipe.get(REDIS_SONAR_DOWN)
+    db_redis.rdb_pipe.get(REDIS_SONAR_FRONT)
+    db_redis.rdb_pipe.get(REDIS_SONAR_BACK)
+    sonar_data = db_redis.rdb_pipe.execute()
+    return list(map(int, sonar_data))
 
-        Returns the list of sonar data
-            [down, front, back]
-        """
-        self.rdb_pipe.get(REDIS_SONAR_DOWN)
-        self.rdb_pipe.get(REDIS_SONAR_FRONT)
-        self.rdb_pipe.get(REDIS_SONAR_BACK)
-        sonar_data = self.rdb_pipe.execute()
-        return list(map(int, sonar_data))
+###############################################################################
+# setter utilities ############################################################
+###############################################################################
 
-    def set(self, key, value):
-        """Set a key-value pair in the redis database"""
-        self.rdb.set(key, value)
+def set_attitude(db_redis, attitude_data):
+    """Set the attitude data and notify REDIS_IMU subscribers of new data
 
-    def set_imu(self, imu_data):
-        """Set the IMU data and notify REDIS_IMU subscribers of new data
+    Inputs
+    ------
+    imu_data : list of ints
+        [droll, dpitch, dyaw, ddx, ddy, ddz]
+    """
+    assert len(imu_data) == 6, "imu_data must be list of 6 ints"
+    db_redis.rdb_pipe.set(REDIS_ATTITUDE_DROLL, imu_data[0])
+    db_redis.rdb_pipe.set(REDIS_ATTITUDE_DPITCH, imu_data[1])
+    db_redis.rdb_pipe.set(REDIS_ATTITUDE_DYAW, imu_data[2])
+    db_redis.rdb_pipe.execute()
+    db_redis.rdb.publish(REDIS_ATTITUDE_CHANNEL, 1)
 
-        Inputs
-        ------
-        imu_data : list of ints
-            [droll, dpitch, dyaw, ddx, ddy, ddz]
-        """
-        assert len(imu_data) == 6, "imu_data must be list of 6 ints"
-        self.rdb_pipe.set(REDIS_IMU_DROLL, imu_data[0])
-        self.rdb_pipe.set(REDIS_IMU_DPITCH, imu_data[1])
-        self.rdb_pipe.set(REDIS_IMU_DYAW, imu_data[2])
-        self.rdb_pipe.set(REDIS_IMU_DDX, imu_data[3])
-        self.rdb_pipe.set(REDIS_IMU_DDY, imu_data[4])
-        self.rdb_pipe.set(REDIS_IMU_DDZ, imu_data[5])
-        self.rdb_pipe.execute()
-        self.rdb.publish(REDIS_IMU_CHANNEL, 1)
+def set_imu(db_redis, imu_data):
+    """Set the IMU data and notify REDIS_IMU subscribers of new data
 
-    def set_rx(self, rx_data):
-        """Set the RX data and notify REDIS_RX subscribers of new data
+    Inputs
+    ------
+    imu_data : list of ints
+        [droll, dpitch, dyaw, ddx, ddy, ddz]
+    """
+    assert len(imu_data) == 6, "imu_data must be list of 6 ints"
+    db_redis.rdb_pipe.set(REDIS_IMU_DROLL, imu_data[0])
+    db_redis.rdb_pipe.set(REDIS_IMU_DPITCH, imu_data[1])
+    db_redis.rdb_pipe.set(REDIS_IMU_DYAW, imu_data[2])
+    db_redis.rdb_pipe.set(REDIS_IMU_DDX, imu_data[3])
+    db_redis.rdb_pipe.set(REDIS_IMU_DDY, imu_data[4])
+    db_redis.rdb_pipe.set(REDIS_IMU_DDZ, imu_data[5])
+    db_redis.rdb_pipe.execute()
+    db_redis.rdb.publish(REDIS_IMU_CHANNEL, 1)
 
-        Inputs
-        ------
-        cmd_data : list of ints
-            [droll, dpitch, dyaw]
-        """
-        assert len(rx_data) == 6, "rx_data must be list of 6 ints"
-        self.rdb_pipe.set(REDIS_RX_DROLL, rx_data[0])
-        self.rdb_pipe.set(REDIS_RX_DPITCH, rx_data[1])
-        self.rdb_pipe.set(REDIS_RX_DYAW, rx_data[2])
-        self.rdb_pipe.set(REDIS_RX_THROTTLE, rx_data[3])
-        self.rdb_pipe.set(REDIS_RX_AUX1, rx_data[4])
-        self.rdb_pipe.set(REDIS_RX_AUX2, rx_data[5])
-        self.rdb_pipe.execute()
-        self.rdb.publish(REDIS_RX_CHANNEL, 1)
+def set_rx(db_redis, rx_data):
+    """Set the RX data and notify REDIS_RX subscribers of new data
 
-    def set_cmd(self, cmd_data):
-        """Set the Command data and notify REDIS_CMD subscribers of new data
+    Inputs
+    ------
+    cmd_data : list of ints
+        [droll, dpitch, dyaw]
+    """
+    assert len(rx_data) == 6, "rx_data must be list of 6 ints"
+    db_redis.rdb_pipe.set(REDIS_RX_DROLL, rx_data[0])
+    db_redis.rdb_pipe.set(REDIS_RX_DPITCH, rx_data[1])
+    db_redis.rdb_pipe.set(REDIS_RX_DYAW, rx_data[2])
+    db_redis.rdb_pipe.set(REDIS_RX_THROTTLE, rx_data[3])
+    db_redis.rdb_pipe.set(REDIS_RX_AUX1, rx_data[4])
+    db_redis.rdb_pipe.set(REDIS_RX_AUX2, rx_data[5])
+    db_redis.rdb_pipe.execute()
+    db_redis.rdb.publish(REDIS_RX_CHANNEL, 1)
 
-        Inputs
-        ------
-        cmd_data : list of ints
-            [droll, dpitch, dyaw]
-        """
-        assert len(cmd_data) == 6, "cmd_data must be list of 6 ints"
-        self.rdb_pipe.set(REDIS_CMD_DROLL, cmd_data[0])
-        self.rdb_pipe.set(REDIS_CMD_DPITCH, cmd_data[1])
-        self.rdb_pipe.set(REDIS_CMD_DYAW, cmd_data[2])
-        self.rdb_pipe.set(REDIS_CMD_THROTTLE, cmd_data[3])
-        self.rdb_pipe.set(REDIS_CMD_AUX1, cmd_data[4])
-        self.rdb_pipe.set(REDIS_CMD_AUX2, cmd_data[5])
-        self.rdb_pipe.execute()
-        self.rdb.publish(REDIS_CMD_CHANNEL, 1)
+def set_cmd(db_redis, cmd_data):
+    """Set the Command data and notify REDIS_CMD subscribers of new data
 
-    def set_sonar(self, sonar_data):
-        """Set the Sonar data and notify REDIS_SONAR subscribers of new data
+    Inputs
+    ------
+    cmd_data : list of ints
+        [droll, dpitch, dyaw]
+    """
+    assert len(cmd_data) == 6, "cmd_data must be list of 6 ints"
+    db_redis.rdb_pipe.set(REDIS_CMD_DROLL, cmd_data[0])
+    db_redis.rdb_pipe.set(REDIS_CMD_DPITCH, cmd_data[1])
+    db_redis.rdb_pipe.set(REDIS_CMD_DYAW, cmd_data[2])
+    db_redis.rdb_pipe.set(REDIS_CMD_THROTTLE, cmd_data[3])
+    db_redis.rdb_pipe.set(REDIS_CMD_AUX1, cmd_data[4])
+    db_redis.rdb_pipe.set(REDIS_CMD_AUX2, cmd_data[5])
+    db_redis.rdb_pipe.execute()
+    db_redis.rdb.publish(REDIS_CMD_CHANNEL, 1)
 
-        Inputs
-        ------
-        sonar_data : list of ints
-            [down, front, back]
-        """
-        self.rdb_pipe.set(REDIS_SONAR_DOWN, sonar_data[0])
-        self.rdb_pipe.set(REDIS_SONAR_FRONT, sonar_data[1])
-        self.rdb_pipe.set(REDIS_SONAR_BACK, sonar_data[2])
-        self.rdb_pipe.execute()
-        self.rdb.publish(REDIS_SONAR_CHANNEL, 1)
+def set_sonar(db_redis, sonar_data):
+    """Set the Sonar data and notify REDIS_SONAR subscribers of new data
+
+    Inputs
+    ------
+    sonar_data : list of ints
+        [down, front, back]
+    """
+    db_redis.rdb_pipe.set(REDIS_SONAR_DOWN, sonar_data[0])
+    db_redis.rdb_pipe.set(REDIS_SONAR_FRONT, sonar_data[1])
+    db_redis.rdb_pipe.set(REDIS_SONAR_BACK, sonar_data[2])
+    db_redis.rdb_pipe.execute()
+    db_redis.rdb.publish(REDIS_SONAR_CHANNEL, 1)

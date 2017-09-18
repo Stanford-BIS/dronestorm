@@ -10,6 +10,8 @@ import time
 import os
 import struct
 import serial
+from .rc_util import (
+    RC_MID
 
 N_CHAN = 12
 MASK_CH_ID = 0b01111000 # 0x78
@@ -17,9 +19,6 @@ SHIFT_CH_ID = 3
 MASK_SERVO_POS_HIGH = 0b00000111 # 0x07
 SPEKTRUM_11MS_2048_DSMX_SYS_ID = 0xb2
 CH_PER_PACKET = 7
-RC_MIN = 988
-RC_MID = 1500
-RC_MAX = 2011
 
 class SpektrumRemoteReceiver(object):
     """ Handle communication over Spektrum remote receiver protocol
@@ -129,7 +128,7 @@ class SpektrumRemoteReceiver(object):
         serial_value : int
             value transmitted over the serial remote receiver protocol
         """
-        rc_value = RC_MIN + (serial_value >> 1)
+        rc_value = RC_MIN_SERIAL + (serial_value >> 1)
         return rc_value
 
     @staticmethod
@@ -175,9 +174,9 @@ class SpektrumRemoteReceiver(object):
         rc_value : int
             value to transmit over the serial remote receiver protocol
         """
-        assert (rc_val >= RC_MIN) & (rc_val <= RC_MAX), (
-            "Valid rc values %d-%d"%(RC_MIN, RC_MAX))
-        serial_value = (rc_val - RC_MIN) << 1
+        assert (rc_val >= RC_MIN_SERIAL) & (rc_val <= RC_MAX_SERIAL), (
+            "Valid rc values %d-%d"%(RC_MIN_SERIAL, RC_MAX_SERIAL))
+        serial_value = (rc_val - RC_MIN_SERIAL) << 1
         return serial_value
 
     @staticmethod
