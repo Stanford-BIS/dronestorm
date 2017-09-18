@@ -22,7 +22,7 @@ def range_1_to_rc(range_1_signal):
     """Convert signals normalized to [0, 1] to rc values of [1000, 2000]""" 
     return RC_MIN + range_1_signal*RC_RANGE
 
-def _range_2_to_rc(range_2_signal):
+def range_2_to_rc(range_2_signal):
     """Convert signals normalized to [-1, 1] to rc values of [1000, 2000]""" 
     return RC_MID + range_2_signal*RC_HALF_RANGE
 
@@ -44,8 +44,9 @@ def rx_rc_to_rx(rx_rc):
 
     Returns a list of rx data in normalized units
     """
-    rx_normalized = (list(map(rc_to_range_2, rx_rc[:3])) + 
-                     list(map(rc_to_range_1, rx_rc[3:])))
+    rx_normalized = ([rc_to_range_1(rx_rc[0])] +
+                     list(map(rc_to_range_2, rx_rc[1:4])) + 
+                     list(map(rc_to_range_1, rx_rc[4:])))
     return rx_normalized
 
 

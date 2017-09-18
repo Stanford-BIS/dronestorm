@@ -326,4 +326,4 @@ def get_imu(drone_comm):
     droll = drone_comm.imu["droll"]
     dpitch = drone_comm.imu["dpitch"]
     dyaw = drone_comm.imu["dyaw"]
-    return list(ax, ay, az, droll, dpitch, dyaw)
+    return [ax, ay, az, droll, dpitch, dyaw]

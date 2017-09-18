@@ -30,10 +30,10 @@ REDIS_IMU_CHANNEL = "IMU"
 
 # RX inputs in RC units
 # We receive droll dpitch dyaw throttle aux1 aux2 from the rc receiver
+REDIS_RX_RC_THROTTLE = "RX_RC_THROTTLE"
 REDIS_RX_RC_DROLL = "RX_RC_DROLL"
 REDIS_RX_RC_DPITCH = "RX_RC_DPITCH"
 REDIS_RX_RC_DYAW = "RX_RC_DYAW"
-REDIS_RX_RC_THROTTLE = "RX_RC_THROTTLE"
 REDIS_RX_RC_AUX1 = "RX_RC_AUX1"
 REDIS_RX_RC_AUX2 = "RX_RC_AUX2"
 REDIS_RX_RC_CHANNEL = "RX_RC"
@@ -42,10 +42,10 @@ REDIS_RX_RC_CHANNEL = "RX_RC"
 # We receive droll dpitch dyaw throttle aux1 aux2 from the rc receiver
 # droll, dpitch, dyaw normalized to [-1, 1]
 # throttle, AUX1, AUX2 normalized to [0, 1]
+REDIS_RX_THROTTLE = "RX_THROTTLE"
 REDIS_RX_DROLL = "RX_DROLL"
 REDIS_RX_DPITCH = "RX_DPITCH"
 REDIS_RX_DYAW = "RX_DYAW"
-REDIS_RX_THROTTLE = "RX_THROTTLE"
 REDIS_RX_AUX1 = "RX_AUX1"
 REDIS_RX_AUX2 = "RX_AUX2"
 REDIS_RX_CHANNEL = "RX"
@@ -226,18 +226,36 @@ def set_rx(db_redis, rx_data):
 
     Inputs
     ------
-    cmd_data : list of ints
-        [droll, dpitch, dyaw]
+    cmd_data : list of floats
+        [throttle, droll, dpitch, dyaw, AUX1, AUX2]
     """
-    assert len(rx_data) == 6, "rx_data must be list of 6 ints"
-    db_redis.rdb_pipe.set(REDIS_RX_DROLL, rx_data[0])
-    db_redis.rdb_pipe.set(REDIS_RX_DPITCH, rx_data[1])
-    db_redis.rdb_pipe.set(REDIS_RX_DYAW, rx_data[2])
-    db_redis.rdb_pipe.set(REDIS_RX_THROTTLE, rx_data[3])
+    assert len(rx_data) == 6, "rx_data must be list of 6 floats"
+    db_redis.rdb_pipe.set(REDIS_RX_THROTTLE, rx_data[0])
+    db_redis.rdb_pipe.set(REDIS_RX_DROLL, rx_data[1])
+    db_redis.rdb_pipe.set(REDIS_RX_DPITCH, rx_data[2])
+    db_redis.rdb_pipe.set(REDIS_RX_DYAW, rx_data[3])
     db_redis.rdb_pipe.set(REDIS_RX_AUX1, rx_data[4])
     db_redis.rdb_pipe.set(REDIS_RX_AUX2, rx_data[5])
     db_redis.rdb_pipe.execute()
     db_redis.rdb.publish(REDIS_RX_CHANNEL, 1)
+
+def set_rx_rc(db_redis, rx_rc_data):
+    """Set the RX_RC data and notify REDIS_RX_RC subscribers of new data
+
+    Inputs
+    ------
+    rx_rc_data : list of ints
+        [throttle, droll, dpitch, dyaw, AUX1, AUX2]
+    """
+    assert len(rx_rc_data) == 6, "rx_rc_data must be list of 6 ints"
+    db_redis.rdb_pipe.set(REDIS_RX_RC_THROTTLE, rx_rc_data[0])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_DROLL, rx_rc_data[1])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_DPITCH, rx_rc_data[2])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_DYAW, rx_rc_data[3])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_AUX1, rx_rc_data[4])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_AUX2, rx_rc_data[5])
+    db_redis.rdb_pipe.execute()
+    db_redis.rdb.publish(REDIS_RX_RC_CHANNEL, 1)
 
 def set_cmd(db_redis, cmd_data):
     """Set the Command data and notify REDIS_CMD subscribers of new data
