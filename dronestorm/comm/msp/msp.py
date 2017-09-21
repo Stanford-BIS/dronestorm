@@ -319,7 +319,7 @@ def get_attitude(mw):
     ------
     mw: an instance of MultiWii
     """
-    msg = msp.MSP_RAW_IMU
+    msg = msp.MSP_ATTITUDE
     data = mw.get_data(msg, MSP_PAYLOAD_LEN[msg], MSP_PAYLOAD_FMT[msg])
     roll = float(data[0]/10.0)
     pitch = float(data[1]/10.0)

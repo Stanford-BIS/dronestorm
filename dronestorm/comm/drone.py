@@ -200,7 +200,7 @@ def set_roll_rate(drone_comm, roll_rate):
         roll rate normalized to [-1, 1]
     """
     roll_rate, valid = _validate_rate(roll_rate)
-    rc_value = _range_2_to_rc(roll_rate)
+    rc_value = range_2_to_rc(roll_rate)
     set_roll_rate_rc(drone_comm, rc_value)
     if not valid:
         print("WARNING: Requested roll rate out of range!")
@@ -215,7 +215,7 @@ def set_pitch_rate(drone_comm, pitch_rate):
         pitch rate normalized to [-1, 1]
     """
     pitch_rate, valid = _validate_rate(pitch_rate)
-    rc_value = _range_2_to_rc(pitch_rate)
+    rc_value = range_2_to_rc(pitch_rate)
     set_pitch_rate_rc(drone_comm, rc_value)
     if not valid:
         print("WARNING: Requested pitch rate out of range!")
@@ -230,7 +230,7 @@ def set_yaw_rate(drone_comm, yaw_rate):
         yaw rate normalized to [-1, 1]
     """
     yaw_rate, valid = _validate_rate(yaw_rate)
-    rc_value = _range_2_to_rc(yaw_rate)
+    rc_value = range_2_to_rc(yaw_rate)
     set_yaw_rate_rc(drone_comm, rc_value)
     if not valid:
         print("WARNING: Requested yaw rate out of range!")
@@ -259,7 +259,7 @@ def set_aux1(drone_comm, aux1):
     aux1: float
         AUX1 normalized to [0, 1]
     """
-    rate, valid = _validate_rate(rate, min_value=0)
+    aux1, valid = _validate_rate(aux1, min_value=0)
     rc_value = range_1_to_rc(aux1)
     set_aux1_rc(drone_comm, rc_value)
     if not valid:
@@ -271,10 +271,10 @@ def set_aux2(drone_comm, aux2):
     Parameters
     ----------
     drone_comm: instance of DroneComm
-    rate: float
+    aux2: float
         AUX2 normalized to [0, 1]
     """
-    aux2, valid = _validate_rate(rate, min_value=0)
+    aux2, valid = _validate_rate(aux2, min_value=0)
     rc_value = range_1_to_rc(aux2)
     set_aux2_rc(drone_comm, rc_value)
     if not valid:
