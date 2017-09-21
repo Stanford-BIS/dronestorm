@@ -307,11 +307,13 @@ def get_attitude(drone_comm):
     Inputs
     ------
     drone_comm: DroneComm instance
+
+    Outputs roll, pitch, yaw centered around 0
     """
-    roll = drone_comm.attitude["roll"]
-    pitch = drone_comm.attitude["pitch"]
-    yaw = drone_comm.attitude["yaw"]
-    return list(roll, pitch, yaw)
+    roll = drone_comm.attitude["roll"] # [-180, 180]
+    pitch = drone_comm.attitude["pitch"] # [-90, 90]
+    yaw = drone_comm.attitude["yaw"] - 180. # [0, 360] -> [-180, 180]
+    return [roll, pitch, yaw]
 
 def get_imu(drone_comm):
     """Retrieve the imu data from a DroneComm instance
@@ -319,6 +321,8 @@ def get_imu(drone_comm):
     Inputs
     ------
     drone_comm: DroneComm instance
+
+    Outputs [ax, ay, az, droll, dpitch, dyaw]
     """
     ax = drone_comm.imu["ax"]
     ay = drone_comm.imu["ay"]
