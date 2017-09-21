@@ -229,13 +229,13 @@ def set_attitude(db_redis, attitude_data):
 
     Inputs
     ------
-    imu_data : list of ints
+    attitude_data : list of ints
         [droll, dpitch, dyaw, ddx, ddy, ddz]
     """
-    assert len(imu_data) == 6, "imu_data must be list of 6 ints"
-    db_redis.rdb_pipe.set(REDIS_ATTITUDE_DROLL, imu_data[0])
-    db_redis.rdb_pipe.set(REDIS_ATTITUDE_DPITCH, imu_data[1])
-    db_redis.rdb_pipe.set(REDIS_ATTITUDE_DYAW, imu_data[2])
+    assert len(attitude_data) == 3, "attitude_data must be list of 3 ints"
+    db_redis.rdb_pipe.set(REDIS_ATTITUDE_ROLL, attitude_data[0])
+    db_redis.rdb_pipe.set(REDIS_ATTITUDE_PITCH, attitude_data[1])
+    db_redis.rdb_pipe.set(REDIS_ATTITUDE_YAW, attitude_data[2])
     db_redis.rdb_pipe.execute()
     db_redis.rdb.publish(REDIS_ATTITUDE_CHANNEL, 1)
 
