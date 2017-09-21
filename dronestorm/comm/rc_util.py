@@ -20,11 +20,11 @@ RC_MAX_SERIAL = 2011
 
 def range_1_to_rc(range_1_signal):
     """Convert signals normalized to [0, 1] to rc values of [1000, 2000]""" 
-    return RC_MIN + range_1_signal*RC_RANGE
+    return int(round(RC_MIN + range_1_signal*RC_RANGE))
 
 def range_2_to_rc(range_2_signal):
     """Convert signals normalized to [-1, 1] to rc values of [1000, 2000]""" 
-    return RC_MID + range_2_signal*RC_HALF_RANGE
+    return int(round(RC_MID + range_2_signal*RC_HALF_RANGE))
 
 def rc_to_range_1(rc_signal):
     """Normalize rc values in range [1000, 2000] to range [0, 1]""" 
