@@ -9,7 +9,32 @@ from dronestorm.comm import DroneComm
 import dronestorm.comm.drone as drone
 from dronestorm.redis_util import DBRedis
 import dronestorm.redis_util as redis_util
-from dronestorm.log_util import print_drone_comm_header, print_drone_comm
+
+def print_drone_comm_header():
+    """Utility to print the header for drone comm"""
+    print(
+        "      Attitude       | " +
+        "                  IMU                  | " +
+        "                                  Command ")
+    print(
+        "  Roll  Pitch    Yaw | " +
+        "   ax    ay    az  dRoll dPitch   dYaw |" +
+        "     Throttle        dRoll       dPitch         dYaw    " +
+        "     AUX1         AUX2")
+
+def print_drone_comm(attitude, imu, cmd, cmd_rc):
+    """Utility to print drone comm data"""
+    sys.stdout.write("%+6.1f %+6.1f %+6.1f | "%tuple(attitude))
+    sys.stdout.write("%+5.f %+5.f %+5.f %+6.f %+6.f %+6.f | "%tuple(imu))
+    sys.stdout.write(
+        "%+6.3f(%4d) "%(cmd[0], cmd_rc[0]) +
+        "%+6.3f(%4d) "%(cmd[1], cmd_rc[1]) +
+        "%+6.3f(%4d) "%(cmd[2], cmd_rc[2]) +
+        "%+6.3f(%4d) "%(cmd[3], cmd_rc[3]) +
+        "%+6.3f(%4d) "%(cmd[4], cmd_rc[4]) +
+        "%+6.3f(%4d) "%(cmd[5], cmd_rc[5]) +
+        "\r")
+    sys.stdout.flush()
 
 def run_drone_comm():
     """Function to forward rc commands to the flight control board
@@ -36,6 +61,7 @@ def run_drone_comm():
             cmd = redis_util.get_cmd(db_redis)
             drone.set_signals(drone_comm, cmd)
             drone_comm.send_rc(drone_comm.rc_data)
+            redis_util.set_cmd_rc(db_redis, drone_comm.rc_data)
             print_drone_comm(attitude, imu, cmd, drone_comm.rc_data)
 
     except KeyboardInterrupt:

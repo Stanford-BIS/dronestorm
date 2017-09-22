@@ -35,12 +35,12 @@ def rc_to_range_2(rc_signal):
     return (rc_signal - RC_MID) * RC_HALF_RANGE_INV
 
 def rx_rc_to_rx(rx_rc):
-    """Convert list of rx data in rc units to [0, 1], [-1, 1]
+    """Convert list of rx data in rc units to [-1, 1], [0, 1] normalized ranges
     
     Inputs
     ------
     rx_rc: list of rx data in RC units
-        [roll_rate, pitch_rate, yaw_rate, throttle, AUX1, AUX2]
+        [throttle, roll_rate, pitch_rate, yaw_rate, AUX1, AUX2]
 
     Returns a list of rx data in normalized units
     """
@@ -48,3 +48,18 @@ def rx_rc_to_rx(rx_rc):
                      list(map(rc_to_range_2, rx_rc[1:4])) + 
                      list(map(rc_to_range_1, rx_rc[4:])))
     return rx_normalized
+
+def rx_to_rx_rc(rx_normed):
+    """Convert list of rx data in [-1, 1], [0, 1] normalized ranges to rc units
+    
+    Inputs
+    ------
+    rx: list of rx data in RC [-1, 1], [0, 1] 
+        [throttle, roll_rate, pitch_rate, yaw_rate, AUX1, AUX2]
+
+    Returns a list of rx data in rc units [1000, 2000]
+    """
+    rx_rc = ([range_1_to_rc(rx_normed[0])] +
+                     list(map(range_2_to_rc, rx_normed[1:4])) + 
+                     list(map(range_1_to_rc, rx_normed[4:])))
+    return rx_rc

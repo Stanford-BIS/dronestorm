@@ -14,6 +14,8 @@ class PDController(object):
         Constant for error
     kd: float
         Constant derivative of error
+    ref0: float (default 0)
+        zero state - reference signal taken to be relative to this value
     center_error: function or None (default None)
         Function to modify the raw error value
         For example, on a circle the desired angle can be reached by rotating
@@ -25,10 +27,11 @@ class PDController(object):
         Output control signal is limited to within [-out_limit : out_limit]
         If None, won't be used.
     """
-    def __init__(self, kp, kd, center_error=None, out_limit=None):
+    def __init__(self, kp, kd, ref0=0., center_error=None, out_limit=None):
         self.kp = kp
         self.kd = kd
 
+        self.ref0 = ref0
         self.center_error = center_error
         self.out_limit = out_limit
 
@@ -46,10 +49,13 @@ class PDController(object):
         dref : float
             time derivative of reference signal
         """
-        error = self.ref - self.state
+        # make ref relative to ref0
+        ref += self.ref0
+
+        error = ref - state
         if self.center_error is not None:
             error = self.center_error(error)
-        derror = self.dref - self.dstate
+        derror = dref - dstate
 
         # compute output
         output = self.kp*error + self.kd*derror

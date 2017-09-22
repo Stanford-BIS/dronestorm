@@ -50,7 +50,17 @@ REDIS_RX_AUX1 = "RX_AUX1"
 REDIS_RX_AUX2 = "RX_AUX2"
 REDIS_RX_CHANNEL = "RX"
 
-# Commands
+# Commands normalized
+# We send roll pitch yaw aux1 aux2 to the flight control board
+REDIS_CMD_RC_DROLL = "CMD_RC_DROLL"
+REDIS_CMD_RC_DPITCH = "CMD_RC_DPITCH"
+REDIS_CMD_RC_DYAW = "CMD_RC_DYAW"
+REDIS_CMD_RC_THROTTLE = "CMD_RC_THROTTLE"
+REDIS_CMD_RC_AUX1 = "CMD_RC_AUX1"
+REDIS_CMD_RC_AUX2 = "CMD_RC_AUX2"
+REDIS_CMD_RC_CHANNEL = "CMD_RC"
+
+# Commands normalized
 # We send roll pitch yaw aux1 aux2 to the flight control board
 REDIS_CMD_DROLL = "CMD_DROLL"
 REDIS_CMD_DPITCH = "CMD_DPITCH"
@@ -99,19 +109,31 @@ class DBRedis(object):
         self.rdb.set(REDIS_IMU_DDY, 0)
         self.rdb.set(REDIS_IMU_DDZ, 0)
         # RX data 
+        self.rdb.set(REDIS_RX_THROTTLE, 0)
         self.rdb.set(REDIS_RX_DROLL, 0)
         self.rdb.set(REDIS_RX_DPITCH, 0)
         self.rdb.set(REDIS_RX_DYAW, 0)
-        self.rdb.set(REDIS_RX_THROTTLE, 0)
         self.rdb.set(REDIS_RX_AUX1, 0)
         self.rdb.set(REDIS_RX_AUX2, 0)
+        self.rdb.set(REDIS_RX_RC_THROTTLE, 0)
+        self.rdb.set(REDIS_RX_RC_DROLL, 0)
+        self.rdb.set(REDIS_RX_RC_DPITCH, 0)
+        self.rdb.set(REDIS_RX_RC_DYAW, 0)
+        self.rdb.set(REDIS_RX_RC_AUX1, 0)
+        self.rdb.set(REDIS_RX_RC_AUX2, 0)
         # Commands
+        self.rdb.set(REDIS_CMD_THROTTLE, 0)
         self.rdb.set(REDIS_CMD_DROLL, 0)
         self.rdb.set(REDIS_CMD_DPITCH, 0)
         self.rdb.set(REDIS_CMD_DYAW, 0)
-        self.rdb.set(REDIS_CMD_THROTTLE, 0)
         self.rdb.set(REDIS_CMD_AUX1, 0)
         self.rdb.set(REDIS_CMD_AUX2, 0)
+        self.rdb.set(REDIS_CMD_RC_THROTTLE, 0)
+        self.rdb.set(REDIS_CMD_RC_DROLL, 0)
+        self.rdb.set(REDIS_CMD_RC_DPITCH, 0)
+        self.rdb.set(REDIS_CMD_RC_DYAW, 0)
+        self.rdb.set(REDIS_CMD_RC_AUX1, 0)
+        self.rdb.set(REDIS_CMD_RC_AUX2, 0)
         # Sonar data
         self.rdb.set(REDIS_SONAR_DOWN, 0)
         self.rdb.set(REDIS_SONAR_FRONT, 0)
@@ -146,7 +168,7 @@ def get_attitude(db_redis):
     db_redis.rdb_pipe.get(REDIS_ATTITUDE_PITCH)
     db_redis.rdb_pipe.get(REDIS_ATTITUDE_YAW)
     imu_dat = db_redis.rdb_pipe.execute()
-    return list(map(int, imu_dat))
+    return list(map(float, imu_dat))
 
 def get_imu(db_redis):
     """Get the IMU data
@@ -199,14 +221,14 @@ def get_cmd(db_redis):
     Returns the list of command data
         [droll, dpitch, dyaw, throttle, aux1, aux2]
     """
+    db_redis.rdb_pipe.get(REDIS_CMD_THROTTLE)
     db_redis.rdb_pipe.get(REDIS_CMD_DROLL)
     db_redis.rdb_pipe.get(REDIS_CMD_DPITCH)
     db_redis.rdb_pipe.get(REDIS_CMD_DYAW)
-    db_redis.rdb_pipe.get(REDIS_CMD_THROTTLE)
     db_redis.rdb_pipe.get(REDIS_CMD_AUX1)
     db_redis.rdb_pipe.get(REDIS_CMD_AUX2)
     cmd_data = db_redis.rdb_pipe.execute()
-    return list(map(int, cmd_data))
+    return list(map(float, cmd_data))
 
 def get_sonar(db_redis):
     """Get the Sonar data
@@ -248,12 +270,12 @@ def set_imu(db_redis, imu_data):
         [droll, dpitch, dyaw, ddx, ddy, ddz]
     """
     assert len(imu_data) == 6, "imu_data must be list of 6 ints"
-    db_redis.rdb_pipe.set(REDIS_IMU_DROLL, imu_data[0])
-    db_redis.rdb_pipe.set(REDIS_IMU_DPITCH, imu_data[1])
-    db_redis.rdb_pipe.set(REDIS_IMU_DYAW, imu_data[2])
-    db_redis.rdb_pipe.set(REDIS_IMU_DDX, imu_data[3])
-    db_redis.rdb_pipe.set(REDIS_IMU_DDY, imu_data[4])
-    db_redis.rdb_pipe.set(REDIS_IMU_DDZ, imu_data[5])
+    db_redis.rdb_pipe.set(REDIS_IMU_DDX, imu_data[0])
+    db_redis.rdb_pipe.set(REDIS_IMU_DDY, imu_data[1])
+    db_redis.rdb_pipe.set(REDIS_IMU_DDZ, imu_data[2])
+    db_redis.rdb_pipe.set(REDIS_IMU_DROLL, imu_data[3])
+    db_redis.rdb_pipe.set(REDIS_IMU_DPITCH, imu_data[4])
+    db_redis.rdb_pipe.set(REDIS_IMU_DYAW, imu_data[5])
     db_redis.rdb_pipe.execute()
     db_redis.rdb.publish(REDIS_IMU_CHANNEL, 1)
 
@@ -294,22 +316,40 @@ def set_rx_rc(db_redis, rx_rc_data):
     db_redis.rdb.publish(REDIS_RX_RC_CHANNEL, 1)
 
 def set_cmd(db_redis, cmd_data):
-    """Set the Command data and notify REDIS_CMD subscribers of new data
+    """Set the Command data in normaed units and notify REDIS_CMD subscribers
 
     Inputs
     ------
-    cmd_data : list of ints
-        [droll, dpitch, dyaw]
+    cmd_data : list of float
+        [throttle, droll, dpitch, dyaw, aux1, aux2]
     """
     assert len(cmd_data) == 6, "cmd_data must be list of 6 ints"
-    db_redis.rdb_pipe.set(REDIS_CMD_DROLL, cmd_data[0])
-    db_redis.rdb_pipe.set(REDIS_CMD_DPITCH, cmd_data[1])
-    db_redis.rdb_pipe.set(REDIS_CMD_DYAW, cmd_data[2])
-    db_redis.rdb_pipe.set(REDIS_CMD_THROTTLE, cmd_data[3])
+    db_redis.rdb_pipe.set(REDIS_CMD_THROTTLE, cmd_data[0])
+    db_redis.rdb_pipe.set(REDIS_CMD_DROLL, cmd_data[1])
+    db_redis.rdb_pipe.set(REDIS_CMD_DPITCH, cmd_data[2])
+    db_redis.rdb_pipe.set(REDIS_CMD_DYAW, cmd_data[3])
     db_redis.rdb_pipe.set(REDIS_CMD_AUX1, cmd_data[4])
     db_redis.rdb_pipe.set(REDIS_CMD_AUX2, cmd_data[5])
     db_redis.rdb_pipe.execute()
     db_redis.rdb.publish(REDIS_CMD_CHANNEL, 1)
+
+def set_cmd_rc(db_redis, cmd_rc_data):
+    """Set the Command data in RC units and notify REDIS_CMD_RC subscribers
+
+    Inputs
+    ------
+    cmd_data : list of ints
+        [throttle, droll, dpitch, dyaw, aux1, aux2]
+    """
+    assert len(cmd_rc_data) == 6, "cmd_data must be list of 6 ints"
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_THROTTLE, cmd_rc_data[0])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_DROLL, cmd_rc_data[1])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_DPITCH, cmd_rc_data[2])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_DYAW, cmd_rc_data[3])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_AUX1, cmd_rc_data[4])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_AUX2, cmd_rc_data[5])
+    db_redis.rdb_pipe.execute()
+    db_redis.rdb.publish(REDIS_CMD_RC_CHANNEL, 1)
 
 def set_sonar(db_redis, sonar_data):
     """Set the Sonar data and notify REDIS_SONAR subscribers of new data

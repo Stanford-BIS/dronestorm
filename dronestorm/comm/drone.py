@@ -42,8 +42,8 @@ class DroneComm(object):
             'droll':0, 'dpitch':0, 'dyaw':0,}
 
         # rc signals
-        # roll, pitch, yaw, throttle, aux1, aux2
-        self.rc_data = [RC_MID]*3 + [RC_MIN]*3
+        # throttle, roll, pitch, yaw, aux1, aux2
+        self.rc_data = [RC_MIN] + [RC_MID]*3 + [RC_MIN]*2
         self.mw_comm = msp.MultiWii(port)
         self.send_rc(self.rc_data)
 
@@ -77,6 +77,20 @@ class DroneComm(object):
 ###############################################################################
 # setters in RC units #########################################################
 ###############################################################################
+
+def set_throttle_rc(drone_comm, throttle):
+    """Set the throttle in RC units
+
+    Inputs
+    ------
+    drone_comm: instance of DroneComm
+    throttle: int [1000, 2000]
+        RC units of throttle.
+        RC units historically PWM positive pulse width in microseconds
+    """
+    drone_comm.rc_data[0] = np.clip(
+        throttle, RC_MIN, RC_MAX)
+
 def set_roll_rate_rc(drone_comm, roll_rate):
     """Apply trim and set the roll rate in RC units
 
@@ -87,7 +101,7 @@ def set_roll_rate_rc(drone_comm, roll_rate):
         RC units of roll rate.
         RC units historically PWM positive pulse width in microseconds
     """
-    drone_comm.rc_data[0] = np.clip(
+    drone_comm.rc_data[1] = np.clip(
         roll_rate + drone_comm.trim['roll'], RC_MIN, RC_MAX)
 
 def set_pitch_rate_rc(drone_comm, pitch_rate):
@@ -100,7 +114,7 @@ def set_pitch_rate_rc(drone_comm, pitch_rate):
         RC units of pitch rate.
         RC units historically PWM positive pulse width in microseconds
     """
-    drone_comm.rc_data[1] = np.clip(
+    drone_comm.rc_data[2] = np.clip(
         pitch_rate + drone_comm.trim['pitch'], RC_MIN, RC_MAX)
 
 def set_yaw_rate_rc(drone_comm, yaw_rate):
@@ -113,21 +127,8 @@ def set_yaw_rate_rc(drone_comm, yaw_rate):
         RC units of yaw rate.
         RC units historically PWM positive pulse width in microseconds
     """
-    drone_comm.rc_data[2] = np.clip(
-        yaw_rate + drone_comm.trim['yaw'], RC_MIN, RC_MAX)
-
-def set_throttle_rc(drone_comm, throttle):
-    """Set the throttle in RC units
-
-    Inputs
-    ------
-    drone_comm: instance of DroneComm
-    throttle: int [1000, 2000]
-        RC units of throttle.
-        RC units historically PWM positive pulse width in microseconds
-    """
     drone_comm.rc_data[3] = np.clip(
-        throttle, RC_MIN, RC_MAX)
+        yaw_rate + drone_comm.trim['yaw'], RC_MIN, RC_MAX)
 
 def set_aux1_rc(drone_comm, aux1):
     """Set the AUX1 channel in RC units
@@ -172,24 +173,21 @@ def set_signals_rc(drone_comm, signals_rc):
     set_aux2_rc(drone_comm, signals_rc[5])
 
 ###############################################################################
-# utilities ###################################################################
-###############################################################################
-
-def _validate_rate(rate, min_value=-1, max_value=1):
-    """Validates that rate is within [min_value, max_value]
-
-    Clips rates and returns whether rate was within range or not
-    """
-    if rate > max_value:
-        return max_value, False
-    elif rate < min_value:
-        return min_value, False
-    else:
-        return rate, True
-
-###############################################################################
 # setters in normalized units #################################################
 ###############################################################################
+def set_throttle(drone_comm, throttle):
+    """Set the throttle
+
+    Parameters
+    ----------
+    drone_comm: instance of DroneComm
+    throttle: float
+        throttle normalized to [0, 1]
+    """
+    throttle = np.clip(throttle, 0, 1)
+    rc_value = range_1_to_rc(throttle)
+    set_throttle_rc(drone_comm, rc_value)
+
 def set_roll_rate(drone_comm, roll_rate):
     """Set the roll rate
 
@@ -199,11 +197,9 @@ def set_roll_rate(drone_comm, roll_rate):
     roll_rate: float
         roll rate normalized to [-1, 1]
     """
-    roll_rate, valid = _validate_rate(roll_rate)
+    roll_rate = np.clip(roll_rate, -1, 1)
     rc_value = range_2_to_rc(roll_rate)
     set_roll_rate_rc(drone_comm, rc_value)
-    if not valid:
-        print("WARNING: Requested roll rate out of range!")
 
 def set_pitch_rate(drone_comm, pitch_rate):
     """Set the pitch rate
@@ -214,11 +210,9 @@ def set_pitch_rate(drone_comm, pitch_rate):
     pitch_rate: float
         pitch rate normalized to [-1, 1]
     """
-    pitch_rate, valid = _validate_rate(pitch_rate)
+    pitch_rate = np.clip(pitch_rate, -1, 1)
     rc_value = range_2_to_rc(pitch_rate)
     set_pitch_rate_rc(drone_comm, rc_value)
-    if not valid:
-        print("WARNING: Requested pitch rate out of range!")
 
 def set_yaw_rate(drone_comm, yaw_rate):
     """Set the yaw rate
@@ -229,26 +223,9 @@ def set_yaw_rate(drone_comm, yaw_rate):
     yaw_rate: float
         yaw rate normalized to [-1, 1]
     """
-    yaw_rate, valid = _validate_rate(yaw_rate)
+    yaw_rate = np.clip(yaw_rate, -1, 1)
     rc_value = range_2_to_rc(yaw_rate)
     set_yaw_rate_rc(drone_comm, rc_value)
-    if not valid:
-        print("WARNING: Requested yaw rate out of range!")
-
-def set_throttle(drone_comm, throttle):
-    """Set the throttle
-
-    Parameters
-    ----------
-    drone_comm: instance of DroneComm
-    throttle: float
-        throttle normalized to [0, 1]
-    """
-    throttle, valid = _validate_rate(throttle, min_value=0)
-    rc_value = range_1_to_rc(throttle)
-    set_throttle_rc(drone_comm, rc_value)
-    if not valid:
-        print("WARNING: Requested throttle out of range!")
 
 def set_aux1(drone_comm, aux1):
     """Set the aux1
@@ -259,11 +236,9 @@ def set_aux1(drone_comm, aux1):
     aux1: float
         AUX1 normalized to [0, 1]
     """
-    aux1, valid = _validate_rate(aux1, min_value=0)
+    aux1 = np.clip(aux1, 0, 1)
     rc_value = range_1_to_rc(aux1)
     set_aux1_rc(drone_comm, rc_value)
-    if not valid:
-        print("WARNING: Requested AUX1 out of range!")
 
 def set_aux2(drone_comm, aux2):
     """Set the aux2
@@ -274,11 +249,9 @@ def set_aux2(drone_comm, aux2):
     aux2: float
         AUX2 normalized to [0, 1]
     """
-    aux2, valid = _validate_rate(aux2, min_value=0)
+    aux2  = np.clip(aux2, 0, 1)
     rc_value = range_1_to_rc(aux2)
     set_aux2_rc(drone_comm, rc_value)
-    if not valid:
-        print("WARNING: Requested AUX2 out of range!")
 
 def set_signals(drone_comm, signals):
     """Set the roll rate, pitch rate, yaw rate, throttle, AUX1, AUX2 data
@@ -286,15 +259,15 @@ def set_signals(drone_comm, signals):
     Inputs
     ------
     channel_data: list of floats
-        [roll_rate, pitch_rate, yaw_rate, throttle, AUX1, AUX2]
+        [throttle, roll_rate, pitch_rate, yaw_rate, AUX1, AUX2]
         roll_rate, pitch_rate, yaw_rate in [-1, 1] range
         throttle, AUX1, AUX2 in [0, 1] range
     """
     assert len(signals) == 6, "signals must contain 6 channels of data"
-    set_roll_rate(drone_comm, signals[0])
-    set_pitch_rate(drone_comm, signals[1])
-    set_yaw_rate(drone_comm, signals[2])
-    set_throttle(drone_comm, signals[3])
+    set_throttle(drone_comm, signals[0])
+    set_roll_rate(drone_comm, signals[1])
+    set_pitch_rate(drone_comm, signals[2])
+    set_yaw_rate(drone_comm, signals[3])
     set_aux1(drone_comm, signals[4])
     set_aux2(drone_comm, signals[5])
 
