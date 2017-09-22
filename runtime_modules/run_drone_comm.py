@@ -8,6 +8,11 @@ import sys
 from dronestorm.comm import DroneComm
 import dronestorm.comm.drone as drone
 from dronestorm.redis_util import DBRedis
+from dronestorm.comm.rc_util import (
+    MSP_THROTTLE_IDX,
+    MSP_DROLL_IDX, MSP_DPITCH_IDX, MSP_DYAW_IDX,
+    MSP_AUX1_IDX, MSP_AUX2_IDX)
+
 import dronestorm.redis_util as redis_util
 
 def print_drone_comm_header():
@@ -27,12 +32,12 @@ def print_drone_comm(attitude, imu, cmd, cmd_rc):
     sys.stdout.write("%+6.1f %+6.1f %+6.1f | "%tuple(attitude))
     sys.stdout.write("%+5.f %+5.f %+5.f %+6.f %+6.f %+6.f | "%tuple(imu))
     sys.stdout.write(
-        "%+6.3f(%4d) "%(cmd[0], cmd_rc[0]) +
-        "%+6.3f(%4d) "%(cmd[1], cmd_rc[1]) +
-        "%+6.3f(%4d) "%(cmd[2], cmd_rc[2]) +
-        "%+6.3f(%4d) "%(cmd[3], cmd_rc[3]) +
-        "%+6.3f(%4d) "%(cmd[4], cmd_rc[4]) +
-        "%+6.3f(%4d) "%(cmd[5], cmd_rc[5]) +
+        "%+6.3f(%4d) "%(cmd[MSP_THROTTLE_IDX], cmd_rc[MSP_THROTTLE_IDX]) +
+        "%+6.3f(%4d) "%(cmd[MSP_DROLL_IDX], cmd_rc[MSP_DROLL_IDX]) +
+        "%+6.3f(%4d) "%(cmd[MSP_DPITCH_IDX], cmd_rc[MSP_DPITCH_IDX]) +
+        "%+6.3f(%4d) "%(cmd[MSP_DYAW_IDX], cmd_rc[MSP_DYAW_IDX]) +
+        "%+6.3f(%4d) "%(cmd[MSP_AUX1_IDX], cmd_rc[MSP_AUX1_IDX]) +
+        "%+6.3f(%4d) "%(cmd[MSP_AUX2_IDX], cmd_rc[MSP_AUX2_IDX]) +
         "\r")
     sys.stdout.flush()
 

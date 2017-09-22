@@ -42,6 +42,7 @@ class DroneComm(object):
             'droll':0, 'dpitch':0, 'dyaw':0,}
 
         # rc signals
+        # Follows the MultiWii Serial Protocol channel index
         # throttle, roll, pitch, yaw, aux1, aux2
         self.rc_data = [RC_MIN] + [RC_MID]*3 + [RC_MIN]*2
         self.mw_comm = msp.MultiWii(port)

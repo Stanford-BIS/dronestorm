@@ -9,6 +9,19 @@ Be sure to have previously installed redis with
 and have the redis server up and running
 """
 import redis
+from dronestorm.comm.rc_util import (
+    REMOTE_RX_DROLL_IDX,
+    REMOTE_RX_DPITCH_IDX,
+    REMOTE_RX_DYAW_IDX,
+    REMOTE_RX_THROTTLE_IDX,
+    REMOTE_RX_AUX1_IDX,
+    REMOTE_RX_AUX2_IDX,
+    MSP_THROTTLE_IDX,
+    MSP_DROLL_IDX,
+    MSP_DPITCH_IDX,
+    MSP_DYAW_IDX,
+    MSP_AUX1_IDX,
+    MSP_AUX2_IDX)
 
 # ATTITUDE data
 # Flight control board computes attitude from gyro data
@@ -108,7 +121,7 @@ class DBRedis(object):
         self.rdb.set(REDIS_IMU_DDX, 0)
         self.rdb.set(REDIS_IMU_DDY, 0)
         self.rdb.set(REDIS_IMU_DDZ, 0)
-        # RX data 
+        # RX data
         self.rdb.set(REDIS_RX_THROTTLE, 0)
         self.rdb.set(REDIS_RX_DROLL, 0)
         self.rdb.set(REDIS_RX_DPITCH, 0)
@@ -141,7 +154,7 @@ class DBRedis(object):
 
     def subscribe(self, chans):
         """Create a pubsub object
-        
+
         Inputs
         ------
         chans : string or list of strings
@@ -219,7 +232,7 @@ def get_cmd(db_redis):
     """Get the Command data
 
     Returns the list of command data
-        [droll, dpitch, dyaw, throttle, aux1, aux2]
+        [throttle, droll, dpitch, dyaw, aux1, aux2]
     """
     db_redis.rdb_pipe.get(REDIS_CMD_THROTTLE)
     db_redis.rdb_pipe.get(REDIS_CMD_DROLL)
@@ -285,15 +298,16 @@ def set_rx(db_redis, rx_data):
     Inputs
     ------
     cmd_data : list of floats
-        [throttle, droll, dpitch, dyaw, AUX1, AUX2]
+        Follows the Spektrum Remote Receiver channel indexing
+        [droll, dpitch, dyaw, throttle, AUX1, AUX2]
     """
     assert len(rx_data) == 6, "rx_data must be list of 6 floats"
-    db_redis.rdb_pipe.set(REDIS_RX_DROLL, rx_data[0])
-    db_redis.rdb_pipe.set(REDIS_RX_DPITCH, rx_data[1])
-    db_redis.rdb_pipe.set(REDIS_RX_DYAW, rx_data[2])
-    db_redis.rdb_pipe.set(REDIS_RX_THROTTLE, rx_data[3])
-    db_redis.rdb_pipe.set(REDIS_RX_AUX1, rx_data[4])
-    db_redis.rdb_pipe.set(REDIS_RX_AUX2, rx_data[5])
+    db_redis.rdb_pipe.set(REDIS_RX_DROLL, rx_data[REMOTE_RX_DROLL_IDX])
+    db_redis.rdb_pipe.set(REDIS_RX_DPITCH, rx_data[REMOTE_RX_DPITCH_IDX])
+    db_redis.rdb_pipe.set(REDIS_RX_DYAW, rx_data[REMOTE_RX_DYAW_IDX])
+    db_redis.rdb_pipe.set(REDIS_RX_THROTTLE, rx_data[REMOTE_RX_THROTTLE_IDX])
+    db_redis.rdb_pipe.set(REDIS_RX_AUX1, rx_data[REMOTE_RX_AUX1_IDX])
+    db_redis.rdb_pipe.set(REDIS_RX_AUX2, rx_data[REMOTE_RX_AUX2_IDX])
     db_redis.rdb_pipe.execute()
     db_redis.rdb.publish(REDIS_RX_CHANNEL, 1)
 
@@ -303,15 +317,16 @@ def set_rx_rc(db_redis, rx_rc_data):
     Inputs
     ------
     rx_rc_data : list of ints
-        [throttle, droll, dpitch, dyaw, AUX1, AUX2]
+        Follows the Spektrum Remote Receiver channel indexing
+        [droll, dpitch, dyaw, throttle, AUX1, AUX2]
     """
     assert len(rx_rc_data) == 6, "rx_rc_data must be list of 6 ints"
-    db_redis.rdb_pipe.set(REDIS_RX_RC_DROLL, rx_rc_data[0])
-    db_redis.rdb_pipe.set(REDIS_RX_RC_DPITCH, rx_rc_data[1])
-    db_redis.rdb_pipe.set(REDIS_RX_RC_DYAW, rx_rc_data[2])
-    db_redis.rdb_pipe.set(REDIS_RX_RC_THROTTLE, rx_rc_data[3])
-    db_redis.rdb_pipe.set(REDIS_RX_RC_AUX1, rx_rc_data[4])
-    db_redis.rdb_pipe.set(REDIS_RX_RC_AUX2, rx_rc_data[5])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_DROLL, rx_rc_data[REMOTE_RX_DROLL_IDX])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_DPITCH, rx_rc_data[REMOTE_RX_DPITCH_IDX])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_DYAW, rx_rc_data[REMOTE_RX_DYAW_IDX])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_THROTTLE, rx_rc_data[REMOTE_RX_THROTTLE_IDX])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_AUX1, rx_rc_data[REMOTE_RX_AUX1_IDX])
+    db_redis.rdb_pipe.set(REDIS_RX_RC_AUX2, rx_rc_data[REMOTE_RX_AUX2_IDX])
     db_redis.rdb_pipe.execute()
     db_redis.rdb.publish(REDIS_RX_RC_CHANNEL, 1)
 
@@ -321,15 +336,16 @@ def set_cmd(db_redis, cmd_data):
     Inputs
     ------
     cmd_data : list of float
+        Follows the MultiWii Serial Protocol channel indexing
         [throttle, droll, dpitch, dyaw, aux1, aux2]
     """
     assert len(cmd_data) == 6, "cmd_data must be list of 6 ints"
-    db_redis.rdb_pipe.set(REDIS_CMD_THROTTLE, cmd_data[0])
-    db_redis.rdb_pipe.set(REDIS_CMD_DROLL, cmd_data[1])
-    db_redis.rdb_pipe.set(REDIS_CMD_DPITCH, cmd_data[2])
-    db_redis.rdb_pipe.set(REDIS_CMD_DYAW, cmd_data[3])
-    db_redis.rdb_pipe.set(REDIS_CMD_AUX1, cmd_data[4])
-    db_redis.rdb_pipe.set(REDIS_CMD_AUX2, cmd_data[5])
+    db_redis.rdb_pipe.set(REDIS_CMD_THROTTLE, cmd_data[MSP_THROTTLE_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_DROLL, cmd_data[MSP_DROLL_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_DPITCH, cmd_data[MSP_DPITCH_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_DYAW, cmd_data[MSP_DYAW_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_AUX1, cmd_data[MSP_AUX1_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_AUX2, cmd_data[MSP_AUX2_IDX])
     db_redis.rdb_pipe.execute()
     db_redis.rdb.publish(REDIS_CMD_CHANNEL, 1)
 
@@ -342,12 +358,12 @@ def set_cmd_rc(db_redis, cmd_rc_data):
         [throttle, droll, dpitch, dyaw, aux1, aux2]
     """
     assert len(cmd_rc_data) == 6, "cmd_data must be list of 6 ints"
-    db_redis.rdb_pipe.set(REDIS_CMD_RC_THROTTLE, cmd_rc_data[0])
-    db_redis.rdb_pipe.set(REDIS_CMD_RC_DROLL, cmd_rc_data[1])
-    db_redis.rdb_pipe.set(REDIS_CMD_RC_DPITCH, cmd_rc_data[2])
-    db_redis.rdb_pipe.set(REDIS_CMD_RC_DYAW, cmd_rc_data[3])
-    db_redis.rdb_pipe.set(REDIS_CMD_RC_AUX1, cmd_rc_data[4])
-    db_redis.rdb_pipe.set(REDIS_CMD_RC_AUX2, cmd_rc_data[5])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_THROTTLE, cmd_rc_data[MSP_THROTTLE_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_DROLL, cmd_rc_data[MSP_DROLL_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_DPITCH, cmd_rc_data[MSP_DPITCH_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_DYAW, cmd_rc_data[MSP_DYAW_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_AUX1, cmd_rc_data[MSP_AUX1_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_AUX2, cmd_rc_data[MSP_AUX2_IDX])
     db_redis.rdb_pipe.execute()
     db_redis.rdb.publish(REDIS_CMD_RC_CHANNEL, 1)
 

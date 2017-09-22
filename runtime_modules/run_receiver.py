@@ -7,11 +7,32 @@ run from terminal with
 `python run_receiver.py`
 """
 from __future__ import print_function
+import sys
 from dronestorm.comm import SpektrumRemoteReceiver
 from dronestorm.comm.rc_util import rx_rc_to_rx
-from dronestorm.log_util import print_rx_rx_rc_header, print_rx_rx_rc_data
 from dronestorm.redis_util import DBRedis
 import dronestorm.redis_util as redis_util
+from dronestorm.comm.rc_util import (
+    REMOTE_RX_THROTTLE_IDX,
+    REMOTE_RX_DROLL_IDX, REMOTE_RX_DPITCH_IDX, REMOTE_RX_DYAW_IDX,
+    REMOTE_RX_AUX1_IDX, REMOTE_RX_AUX2_IDX)
+
+def print_rx_rx_rc_header():
+    """Utility to print the rx and rx_rc header"""
+    print("Throttle     Roll         Pitch        Yaw          " + 
+          "AUX1         AUX2")
+
+def print_rx_rx_rc_data(rx_data, rx_rc_data):
+    """Utility to write rx and rx_rc data to stdout"""
+    sys.stdout.write(
+        "%+6.3f(%4d) "%(rx_data[REMOTE_RX_THROTTLE_IDX], rx_rc_data[REMOTE_RX_THROTTLE_IDX]) +
+        "%+6.3f(%4d) "%(rx_data[REMOTE_RX_DROLL_IDX], rx_rc_data[REMOTE_RX_DROLL_IDX]) +
+        "%+6.3f(%4d) "%(rx_data[REMOTE_RX_DPITCH_IDX], rx_rc_data[REMOTE_RX_DPITCH_IDX]) +
+        "%+6.3f(%4d) "%(rx_data[REMOTE_RX_DYAW_IDX], rx_rc_data[REMOTE_RX_DYAW_IDX]) +
+        "%+6.3f(%4d) "%(rx_data[REMOTE_RX_AUX1_IDX], rx_rc_data[REMOTE_RX_AUX1_IDX]) +
+        "%+6.3f(%4d)"%(rx_data[REMOTE_RX_AUX2_IDX], rx_rc_data[REMOTE_RX_AUX2_IDX]) +
+        "\r")
+    sys.stdout.flush()
 
 def run_receiver():
     """Function to handles receiver communications"""

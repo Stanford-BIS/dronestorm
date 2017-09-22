@@ -18,6 +18,22 @@ RC_HALF_RANGE_INV = 1./RC_HALF_RANGE
 RC_MIN_SERIAL = 988
 RC_MAX_SERIAL = 2011
 
+# Spektrum Remote Receiver protocol channel indexing
+(REMOTE_RX_THROTTLE_IDX,
+ REMOTE_RX_DROLL_IDX,
+ REMOTE_RX_DPITCH_IDX,
+ REMOTE_RX_DYAW_IDX,
+ REMOTE_RX_AUX1_IDX,
+ REMOTE_RX_AUX2_IDX) = [0, 1, 2, 3, 4, 5]
+
+# MultiWii Serial Protocol channel indexing
+(MSP_THROTTLE_IDX,
+ MSP_DROLL_IDX,
+ MSP_DPITCH_IDX,
+ MSP_DYAW_IDX,
+ MSP_AUX1_IDX,
+ MSP_AUX2_IDX) = [0, 1, 2, 3, 4, 5]
+
 def range_1_to_rc(range_1_signal):
     """Convert signals normalized to [0, 1] to rc values of [1000, 2000]""" 
     return int(round(RC_MIN + range_1_signal*RC_RANGE))
