@@ -7,7 +7,7 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 from . import msp
-from .rc_util import (
+from .rx_util import (
     RC_MIN, RC_MID, RC_MAX,
     range_1_to_rc, range_2_to_rc)
 

@@ -9,7 +9,7 @@ Be sure to have previously installed redis with
 and have the redis server up and running
 """
 import redis
-from dronestorm.comm.rc_util import (
+from dronestorm.comm.rx_util import (
     REMOTE_RX_DROLL_IDX,
     REMOTE_RX_DPITCH_IDX,
     REMOTE_RX_DYAW_IDX,
@@ -202,12 +202,12 @@ def get_rx(db_redis):
     """Get the receiver data
 
     Returns the list of receiver data
-        [droll, dpitch, dyaw, throttle, aux1, aux2]
+        [throttle, droll, dpitch, dyaw, aux1, aux2]
     """
+    db_redis.rdb_pipe.get(REDIS_RX_THROTTLE)
     db_redis.rdb_pipe.get(REDIS_RX_DROLL)
     db_redis.rdb_pipe.get(REDIS_RX_DPITCH)
     db_redis.rdb_pipe.get(REDIS_RX_DYAW)
-    db_redis.rdb_pipe.get(REDIS_RX_THROTTLE)
     db_redis.rdb_pipe.get(REDIS_RX_AUX1)
     db_redis.rdb_pipe.get(REDIS_RX_AUX2)
     rx_data = db_redis.rdb_pipe.execute()
@@ -217,12 +217,12 @@ def get_rx_rc(db_redis):
     """Get the receiver data in RC units
 
     Returns the list of receiver data in RC units
-        [droll, dpitch, dyaw, throttle, aux1, aux2]
+        [throttle, droll, dpitch, dyaw, aux1, aux2]
     """
+    db_redis.rdb_pipe.get(REDIS_RX_RC_THROTTLE)
     db_redis.rdb_pipe.get(REDIS_RX_RC_DROLL)
     db_redis.rdb_pipe.get(REDIS_RX_RC_DPITCH)
     db_redis.rdb_pipe.get(REDIS_RX_RC_DYAW)
-    db_redis.rdb_pipe.get(REDIS_RX_RC_THROTTLE)
     db_redis.rdb_pipe.get(REDIS_RX_RC_AUX1)
     db_redis.rdb_pipe.get(REDIS_RX_RC_AUX2)
     rx_data = db_redis.rdb_pipe.execute()
@@ -299,13 +299,13 @@ def set_rx(db_redis, rx_data):
     ------
     cmd_data : list of floats
         Follows the Spektrum Remote Receiver channel indexing
-        [droll, dpitch, dyaw, throttle, AUX1, AUX2]
+        [throttle, droll, dpitch, dyaw, AUX1, AUX2]
     """
     assert len(rx_data) == 6, "rx_data must be list of 6 floats"
+    db_redis.rdb_pipe.set(REDIS_RX_THROTTLE, rx_data[REMOTE_RX_THROTTLE_IDX])
     db_redis.rdb_pipe.set(REDIS_RX_DROLL, rx_data[REMOTE_RX_DROLL_IDX])
     db_redis.rdb_pipe.set(REDIS_RX_DPITCH, rx_data[REMOTE_RX_DPITCH_IDX])
     db_redis.rdb_pipe.set(REDIS_RX_DYAW, rx_data[REMOTE_RX_DYAW_IDX])
-    db_redis.rdb_pipe.set(REDIS_RX_THROTTLE, rx_data[REMOTE_RX_THROTTLE_IDX])
     db_redis.rdb_pipe.set(REDIS_RX_AUX1, rx_data[REMOTE_RX_AUX1_IDX])
     db_redis.rdb_pipe.set(REDIS_RX_AUX2, rx_data[REMOTE_RX_AUX2_IDX])
     db_redis.rdb_pipe.execute()
@@ -318,7 +318,7 @@ def set_rx_rc(db_redis, rx_rc_data):
     ------
     rx_rc_data : list of ints
         Follows the Spektrum Remote Receiver channel indexing
-        [droll, dpitch, dyaw, throttle, AUX1, AUX2]
+        [throttle, droll, dpitch, dyaw, AUX1, AUX2]
     """
     assert len(rx_rc_data) == 6, "rx_rc_data must be list of 6 ints"
     db_redis.rdb_pipe.set(REDIS_RX_RC_DROLL, rx_rc_data[REMOTE_RX_DROLL_IDX])

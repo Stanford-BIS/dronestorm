@@ -8,7 +8,7 @@ import sys
 from dronestorm.comm import DroneComm
 import dronestorm.comm.drone as drone
 from dronestorm.redis_util import DBRedis
-from dronestorm.comm.rc_util import (
+from dronestorm.comm.rx_util import (
     MSP_THROTTLE_IDX,
     MSP_DROLL_IDX, MSP_DPITCH_IDX, MSP_DYAW_IDX,
     MSP_AUX1_IDX, MSP_AUX2_IDX)

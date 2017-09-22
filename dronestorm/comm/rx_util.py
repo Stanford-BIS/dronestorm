@@ -6,6 +6,8 @@ PWM signals were used to directly drive servos and motors
 Nowadaws, we communicate over digital protocols, but lots of firmware
 out in the wild still use values in the 1000-2000 range
 """
+import numpy as np
+
 RC_MIN = 1000
 RC_MID = 1500
 RC_MAX = 2000
@@ -79,3 +81,16 @@ def rx_to_rx_rc(rx_normed):
                      list(map(range_2_to_rc, rx_normed[1:4])) + 
                      list(map(range_1_to_rc, rx_normed[4:])))
     return rx_rc
+
+def clip_rx(rx_data):
+    """Clips rx channels to [-1, 1] or [0,1] range
+    
+    Expects channels in Spektrum Remote Receiver Indexing order
+        [throttle, roll_rate, pitch_rate, yaw_rate, AUX1, AUX2]
+    """
+    rx_data[0] = np.clip(rx_data[REMOTE_RX_THROTTLE_IDX], 0, 1)
+    rx_data[1] = np.clip(rx_data[REMOTE_RX_DROLL_IDX], -1, 1)
+    rx_data[2] = np.clip(rx_data[REMOTE_RX_DPITCH_IDX], -1, 1)
+    rx_data[3] = np.clip(rx_data[REMOTE_RX_DYAW_IDX], -1, 1)
+    rx_data[4] = np.clip(rx_data[REMOTE_RX_AUX1_IDX], 0, 1)
+    rx_data[5] = np.clip(rx_data[REMOTE_RX_AUX2_IDX], 0, 1)

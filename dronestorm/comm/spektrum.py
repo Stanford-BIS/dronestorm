@@ -10,7 +10,7 @@ import time
 import os
 import struct
 import serial
-from .rc_util import (RC_MIN_SERIAL, RC_MID, RC_MAX_SERIAL)
+from .rx_util import (RC_MIN_SERIAL, RC_MID, RC_MAX_SERIAL)
 
 N_CHAN = 12
 MASK_CH_ID = 0b01111000 # 0x78

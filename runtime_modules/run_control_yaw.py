@@ -1,18 +1,19 @@
-"""Compute yaw controlling outputs during runtime
+"""Compute yaw controlling outputs
 
 run from terminal with
-`python run_yaw_control.py`
+`python run_control_yaw.py`
 """
 from __future__ import print_function
 import sys
+import numpy as np
 from dronestorm.redis_util import (
         DBRedis, REDIS_RX_CHANNEL, REDIS_ATTITUDE_CHANNEL)
 import dronestorm.redis_util as redis_util
-from dronestorm.comm.rc_util import rx_to_rx_rc
+from dronestorm.comm.rx_util import rx_to_rx_rc, clip_rx
 from dronestorm.control import PDController
 from dronestorm.control.utils import find_min_angle
 
-def print_yaw_control_header():
+def print_control_yaw_header():
     """Utility to print header for yaw control"""
     print("Attitude |    IMU |  "+
         "                   RX                      | " +
@@ -23,7 +24,7 @@ def print_yaw_control_header():
         "Throttle  dRoll dPitch   dYaw " +
         "  AUX1   AUX2")
 
-def print_yaw_control_data(yaw, dyaw, rx, cmd):
+def print_control_yaw_data(yaw, dyaw, rx, cmd):
     """Utility to print yaw control data"""
     sys.stdout.write("  %+6.1f | "%(yaw))
     sys.stdout.write("%+6.f | "%(dyaw))
@@ -44,7 +45,7 @@ def print_yaw_control_data(yaw, dyaw, rx, cmd):
         "\r")
     sys.stdout.flush()
 
-def run_yaw_control():
+def run_control_yaw():
     """Function to compute the control signals for yaw control
     
     Reads attitude data from redis database
@@ -54,7 +55,7 @@ def run_yaw_control():
     db_redis = DBRedis()
     db_sub_attitude = db_redis.subscribe(REDIS_ATTITUDE_CHANNEL)
     # wait for initial yaw data to use as reference point
-    print("Initializing yaw control. Waiting for initial yaw reading...")
+    print("Initializing control_yaw. Waiting for initial yaw reading...")
     db_notice = db_sub_attitude.get_message(timeout=10000)
     yaw0 = redis_util.get_attitude(db_redis)[2]
     print("Initial yaw reading taken...")
@@ -65,8 +66,8 @@ def run_yaw_control():
     kd_yaw  = 0.00009
     yaw_controller = PDController(
         kp_yaw, kd_yaw, ref0=yaw0, center_error=find_min_angle, out_limit=1.)
-    print("Running yaw control...Ctrl-c to stop")
-    print_yaw_control_header()
+    print("Running control_yaw...Ctrl-c to stop")
+    print_control_yaw_header()
     try:
         while True:
             # check for new receiver or attitude data
@@ -86,11 +87,12 @@ def run_yaw_control():
                 # forward most of rx data to cmd except yaw
                 cmd = rx[:]
                 cmd[3] = cmd_yaw
+                clip_rx(cmd)
 
                 redis_util.set_cmd(db_redis, cmd)
-                print_yaw_control_data(yaw, dyaw, rx, cmd)
+                print_control_yaw_data(yaw, dyaw, rx, cmd)
     except KeyboardInterrupt:
-        print("\nInterrupt received: stopping attitude control...")
+        print("\nInterrupt received: stopping control...")
 
 if __name__ == "__main__":
-    run_yaw_control()
+    run_control_yaw()
