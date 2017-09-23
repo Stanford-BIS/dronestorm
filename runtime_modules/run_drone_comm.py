@@ -4,6 +4,7 @@ run from terminal with
 `python run_drone_comm.py`
 """
 from __future__ import print_function
+import os
 import sys
 from dronestorm.comm import DroneComm
 import dronestorm.comm.drone as drone
@@ -50,9 +51,11 @@ def run_drone_comm():
     Reads command data (REDIS_CMD_*) from redis database
     Writes command data to the flight control board
     """
+    print(os.path.basename(__file__))
     db_redis = DBRedis()
     db_redis.reset_db()
     drone_comm = DroneComm()
+    print("Running drone_comm...Ctrl-c to stop")
     print_drone_comm_header()
     try:
         while True:

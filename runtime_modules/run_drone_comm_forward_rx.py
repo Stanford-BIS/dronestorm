@@ -7,6 +7,7 @@ run from terminal with
 `python run_drone_comm_foward_rx_rc.py`
 """
 from __future__ import print_function
+import os
 import sys
 from dronestorm.comm import MultiWii
 from dronestorm.comm import msp
@@ -36,6 +37,7 @@ def print_rx_rx_rc_data(rx_data, rx_rc_data):
 
 def run_drone_comm_forward_rx_rc():
     """Function to forward rc commands to the flight control board"""
+    print(os.path.basename(__file__))
     db_redis = DBRedis()
     mw_comm = MultiWii()
     rx_sub = db_redis.subscribe(REDIS_RX_CHANNEL)

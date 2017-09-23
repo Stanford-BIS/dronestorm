@@ -7,6 +7,7 @@ run from terminal with
 `python run_receiver.py`
 """
 from __future__ import print_function
+import os
 import sys
 from dronestorm.comm import SpektrumRemoteReceiver
 from dronestorm.comm.rx_util import rx_rc_to_rx
@@ -36,6 +37,7 @@ def print_rx_rx_rc_data(rx_data, rx_rc_data):
 
 def run_receiver():
     """Function to handles receiver communications"""
+    print(os.path.basename(__file__))
     db_redis = DBRedis()
     rx_comm = SpektrumRemoteReceiver()
     try:

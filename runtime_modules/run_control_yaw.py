@@ -4,6 +4,7 @@ run from terminal with
 `python run_control_yaw.py`
 """
 from __future__ import print_function
+import os
 import sys
 import numpy as np
 from dronestorm.redis_util import (
@@ -52,6 +53,7 @@ def run_control_yaw():
     Reads receiver data from redis database
     Writes command data to redis database
     """
+    print(os.path.basename(__file__))
     db_redis = DBRedis()
     db_sub_attitude = db_redis.subscribe(REDIS_ATTITUDE_CHANNEL)
     # wait for initial yaw data to use as reference point

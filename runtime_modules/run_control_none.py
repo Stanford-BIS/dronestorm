@@ -4,6 +4,7 @@ run from terminal with
 `python run_control_none.py`
 """
 from __future__ import print_function
+import os
 import sys
 import numpy as np
 from dronestorm.redis_util import DBRedis, REDIS_RX_CHANNEL
@@ -51,6 +52,7 @@ def run_control_none():
     sets command data to receiver data clipped to [-1, 1]
     Writes command data to redis database
     """
+    print(os.path.basename(__file__))
     db_redis = DBRedis()
     db_sub = db_redis.subscribe([REDIS_RX_CHANNEL])
 
