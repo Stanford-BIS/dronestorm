@@ -1,4 +1,5 @@
 #!/bin/bash
+# Script for running runtime_modules/run_control_yaw.py
 
 TMUX_SESSION_NAME=run_control_yaw
 CURDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
