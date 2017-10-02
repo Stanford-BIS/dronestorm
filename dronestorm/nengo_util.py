@@ -3,6 +3,7 @@ from __future__ import print_function
 import time
 import nengo
 import numpy as np
+import dronestorm.redis_util as redis_util
 
 # minimum sleep accurately implemented by the OS and hardware
 # determine using benchmark/benchmark_sleep.py
@@ -92,3 +93,36 @@ def run_nengo_realtime(
     if print_runtime_stats:
         _print_run_nengo_realtime_stats(
             dt_target, dt_measured, dt_measured_full, idx)
+
+class RedisNodeGetAttitude(nengo.Node):
+    """nengo Node for getting attitude data from redis"""
+    def __init__(self, dbredis):
+        self.dbredis = dbredis
+        super(RedisNodeGetAttitude, self).__init__(
+            self.update, size_in=0, size_out=3)
+
+    def update(self, t):
+        """update called with each step of the simulation"""
+        return np.array(redis_util.get_attitude(self.dbredis))
+
+class RedisNodeGetRx(nengo.Node):
+    """nengo Node for getting normalized receiver data from redis"""
+    def __init__(self, dbredis):
+        self.dbredis = dbredis
+        super(RedisNodeGetRx, self).__init__(
+            self.update, size_in=0, size_out=6)
+
+    def update(self, t):
+        """update called with each step of the simulation"""
+        return np.array(redis_util.get_rx(self.dbredis))
+
+class RedisNodeSetCmd(nengo.Node):
+    """nengo Node for setting command data on redis"""
+    def __init__(self, dbredis):
+        self.dbredis = dbredis
+        super(RedisNodeSetCmd, self).__init__(
+            self.update, size_in=6, size_out=0)
+
+    def update(self, t, x):
+        """update called with each step of the simulation"""
+        redis_util.set_cmd(self.dbredis, x)
