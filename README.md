@@ -28,6 +28,13 @@ and the flight control board.
 
 `sudo python setup.py develop`
 
+## Run
+
+Runtime scripts can be found in the `runtime` directory. Executing one of the scripts should start
+the appropriate modules from the `runtime_modules` directory. 
+As an example, to run a controller which simply forwards receiver data to
+the flight controller, change to the `runtime` directory and run `./run_control_none.sh`
+
 # Quadcopter Build 1
 
 In this build, the Raspberry Pi takes data in from the flight control board via
