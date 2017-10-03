@@ -6,18 +6,21 @@ run from terminal with
 from __future__ import print_function
 from dronestorm.redis_util import DBRedis
 import dronestorm.redis_util as redis_util
-from dronestorm.control import AttitudePID
+from  dronestorm.redis_util import REDIS_RX_CHANNEL, REDIS_ATTITUDE_CHANNEL, REDIS_IMU_CHANNEL
+from dronestorm.control.attitude import AttitudePD
 
 def run_attitude_control():
     """Function to compute the control signals for attitude control
-    
-    Reads IMU data to redis database
-    Reads receiver data from redis database
-    Writes command data to redis database
+
+    Reads IMU data from the redis database
+    Reads receiver data from the redis database
+    Writes command data to the redis database
     """
+    attitude_controller = AttitudePD(roll_kp=1, roll_kd=1, pitch_kp=1, pitch_kd=1)
+
     db_redis = DBRedis()
-    db_sub = db_redis.subscribe([REDIS_RX_CHANNEL, REDIS_ATTITUDE_CHANNEL])
-    attitude_controller = AttitudePID(...)
+    db_sub = db_redis.subscribe([REDIS_RX_CHANNEL, REDIS_ATTITUDE_CHANNEL, REDIS_IMU_CHANNEL])
+
     try:
         print("Running attitude control...Ctrl-c to stop")
         while True:
@@ -25,9 +28,17 @@ def run_attitude_control():
             db_notice = db_sub.get_message(timeout=10)
             if db_notice is not None:
                 rx_data = redis_util.get_rx(db_redis)
-                attitude_data = redis_util.get_attitude(db_redis)
-                rx_rc_data = rx_comm.read_data()[:6] # only take first 6 channels
-                redis_util.set_cmd(db_redis, cmd_data)
+                attitude = redis_util.get_attitude(db_redis)
+                imu = redis_util.get_imu(db_redis)
+
+                droll_cmd, dpitch_cmd = attitude_controller.step(
+                    attitude[:2], imu[:2], rx_data[1:3], [0., 0.])
+
+                throttle = rx_data[0]
+                dyaw_cmd = rx_data[3]
+                aux1, aux2 = rx_data[4:]
+                cmd = [throttle, droll_cmd, dpitch_cmd, dyaw_cmd, aux1, aux2]
+                redis_util.set_cmd(db_redis, cmd)
     except KeyboardInterrupt:
         print("\nInterrupt received: stopping attitude control...")
 

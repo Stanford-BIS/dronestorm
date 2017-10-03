@@ -33,6 +33,8 @@ class PDController(object):
 
         self.ref0 = ref0
         self.center_error = center_error
+        if out_limit is not None:
+            assert out_limit > 0
         self.out_limit = out_limit
 
     def step(self, state, dstate, ref, dref):

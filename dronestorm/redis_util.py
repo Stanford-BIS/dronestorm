@@ -175,7 +175,7 @@ def get_attitude(db_redis):
     """Get the attitude data
 
     Returns the list of attitude data
-        [droll, dpitch, dyaw, ddx, ddy, ddz]
+        [roll, pitch, yaw]
     """
     db_redis.rdb_pipe.get(REDIS_ATTITUDE_ROLL)
     db_redis.rdb_pipe.get(REDIS_ATTITUDE_PITCH)
