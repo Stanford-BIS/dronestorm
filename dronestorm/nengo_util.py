@@ -25,8 +25,8 @@ def _print_run_nengo_realtime_stats(
     dt_std = np.std(dt_measured)
 
     print("target dt: %fs"%dt_target)
-    print("measured dt (N=%d) mean:%fs median:%fs std:%fs std/mean:%f"%(
-        n_samples, dt_mean, dt_median, dt_std, dt_std/dt_mean))
+    print("measured dt (N=%d) mean:%fs median:%fs std:%fs std/mean:%f mean_dt/target_dt:%f"%(
+        n_samples, dt_mean, dt_median, dt_std, dt_std/dt_mean, dt_mean/dt_target))
 
 def run_nengo_realtime(
         nengo_sim, sim_stop_time=None, print_runtime_stats=True):
