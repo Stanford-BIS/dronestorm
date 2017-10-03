@@ -21,7 +21,7 @@ def run_control_none_nengo():
     """
     print(os.path.basename(__file__))
     db_redis = DBRedis()
-    nengo_sim = create_control_none_nengo()
+    nengo_sim = create_control_none_nengo(sim_dt=0.005, syn_tau=0.005)
 
     print("Running control_none_nengo...Ctrl-c to stop")
     print_control_none_header()

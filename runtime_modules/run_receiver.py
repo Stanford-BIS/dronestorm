@@ -20,7 +20,7 @@ import dronestorm.redis_util as redis_util
 
 def print_rx_rx_rc_header():
     """Utility to print the rx and rx_rc header"""
-    print("Throttle     Roll         Pitch        Yaw          " + 
+    print("Throttle     dRoll        dPitch       dYaw          " + 
           "AUX1         AUX2")
 
 def print_rx_rx_rc_data(rx_data, rx_rc_data):
