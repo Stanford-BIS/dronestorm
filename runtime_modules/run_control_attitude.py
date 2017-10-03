@@ -4,9 +4,9 @@ run from terminal with
 `python run_control_attitude.py`
 """
 from __future__ import print_function
-from dronestorm.redis_util import DBRedis
-import dronestorm.redis_util as redis_util
-from  dronestorm.redis_util import REDIS_RX_CHANNEL, REDIS_ATTITUDE_CHANNEL, REDIS_IMU_CHANNEL
+from dronestorm.comm.redis_util import DBRedis
+import dronestorm.comm.redis_util as redis_util
+from  dronestorm.comm.redis_util import REDIS_RX_CHANNEL, REDIS_ATTITUDE_CHANNEL, REDIS_IMU_CHANNEL
 from dronestorm.control.attitude import AttitudePD
 
 def run_attitude_control():

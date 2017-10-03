@@ -1,6 +1,6 @@
 """Test for redis_util"""
 from __future__ import print_function
-from dronestorm import redis_util as r
+from dronestorm.comm import redis_util as r
 
 rdb = r.DBRedis()
 rdb.reset_db()

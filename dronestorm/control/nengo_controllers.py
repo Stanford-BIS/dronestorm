@@ -1,5 +1,5 @@
 """Module for nengo control networks"""
-import dronestorm.redis_util as redis_util
+import dronestorm.comm.redis_util as redis_util
 from dronestorm.nengo_util import RedisNodeGetRx, RedisNodeSetCmd, PrintNode
 from dronestorm.print_util import print_control_none_data
 import nengo

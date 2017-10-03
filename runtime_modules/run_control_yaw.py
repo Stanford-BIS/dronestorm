@@ -7,9 +7,9 @@ from __future__ import print_function
 import os
 import sys
 import numpy as np
-from dronestorm.redis_util import (
+from dronestorm.comm.redis_util import (
         DBRedis, REDIS_RX_CHANNEL, REDIS_ATTITUDE_CHANNEL)
-import dronestorm.redis_util as redis_util
+import dronestorm.comm.redis_util as redis_util
 from dronestorm.comm.rx_util import rx_to_rx_rc, clip_rx
 from dronestorm.control import PDController
 from dronestorm.control.utils import find_min_angle

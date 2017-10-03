@@ -15,8 +15,8 @@ from dronestorm.comm.rx_util import (
     REMOTE_RX_THROTTLE_IDX,
     REMOTE_RX_DROLL_IDX, REMOTE_RX_DPITCH_IDX, REMOTE_RX_DYAW_IDX,
     REMOTE_RX_AUX1_IDX, REMOTE_RX_AUX2_IDX)
-from dronestorm.redis_util import DBRedis
-import dronestorm.redis_util as redis_util
+from dronestorm.comm.redis_util import DBRedis
+import dronestorm.comm.redis_util as redis_util
 
 def print_rx_rx_rc_header():
     """Utility to print the rx and rx_rc header"""

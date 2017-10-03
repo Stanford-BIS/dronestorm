@@ -5,8 +5,8 @@ run from terminal with
 """
 from __future__ import print_function
 import os
-from dronestorm.redis_util import DBRedis, REDIS_RX_CHANNEL
-import dronestorm.redis_util as redis_util
+from dronestorm.comm.redis_util import DBRedis, REDIS_RX_CHANNEL
+import dronestorm.comm.redis_util as redis_util
 from dronestorm.comm.rx_util import clip_rx
 from dronestorm.print_util import print_control_none_header, print_control_none_data
 

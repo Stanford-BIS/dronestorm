@@ -2,7 +2,7 @@
 from __future__ import print_function
 import time
 import numpy as np
-from dronestorm import redis_util
+from dronestorm.comm import redis_util
 
 N = 100
 rdb = redis_util.DBRedis()

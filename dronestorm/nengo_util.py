@@ -3,7 +3,7 @@ from __future__ import print_function
 import time
 import nengo
 import numpy as np
-import dronestorm.redis_util as redis_util
+import dronestorm.comm.redis_util as redis_util
 
 # minimum sleep accurately implemented by the OS and hardware
 # determine using benchmark/benchmark_sleep.py

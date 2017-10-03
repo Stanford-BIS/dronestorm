@@ -8,13 +8,13 @@ import os
 import sys
 from dronestorm.comm import DroneComm
 import dronestorm.comm.drone as drone
-from dronestorm.redis_util import DBRedis
+from dronestorm.comm.redis_util import DBRedis
 from dronestorm.comm.rx_util import (
     MSP_THROTTLE_IDX,
     MSP_DROLL_IDX, MSP_DPITCH_IDX, MSP_DYAW_IDX,
     MSP_AUX1_IDX, MSP_AUX2_IDX)
 
-import dronestorm.redis_util as redis_util
+import dronestorm.comm.redis_util as redis_util
 
 def print_drone_comm_header():
     """Utility to print the header for drone comm"""
