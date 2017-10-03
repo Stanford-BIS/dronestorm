@@ -16,7 +16,8 @@ def run_attitude_control():
     Reads receiver data from the redis database
     Writes command data to the redis database
     """
-    attitude_controller = AttitudePD(roll_kp=1, roll_kd=1, pitch_kp=1, pitch_kd=1)
+    attitude_controller = AttitudePD(
+        roll_kp=0.04, roll_kd=0.000001, pitch_kp=0.04, pitch_kd=0.000001)
 
     db_redis = DBRedis()
     db_sub = db_redis.subscribe([REDIS_RX_CHANNEL, REDIS_ATTITUDE_CHANNEL, REDIS_IMU_CHANNEL])
