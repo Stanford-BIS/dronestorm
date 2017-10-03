@@ -32,4 +32,3 @@ def print_control_none_data(rx, cmd):
         "%+6.3f "%(cmd[REMOTE_RX_AUX2_IDX]) +
         "\r")
     sys.stdout.flush()
-

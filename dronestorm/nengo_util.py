@@ -67,9 +67,6 @@ def run_nengo_realtime(
     idx = 0
     dt_measured_full = False
     try:
-        print("Running nengo simulation...")
-        if sim_stop_time is None:
-            print("Press Ctrl-c to end simulation")
         while t_cur < t_stop or sim_stop_time is None:
             start = time.time()
 
@@ -126,3 +123,14 @@ class RedisNodeSetCmd(nengo.Node):
     def update(self, t, x):
         """update called with each step of the simulation"""
         redis_util.set_cmd(self.dbredis, x)
+
+class PrintNode(nengo.Node):
+    """nengo Node for printing convienence"""
+    def __init__(self, print_fun, size_in):
+        self.print_fun = print_fun
+        super(PrintNode, self).__init__(
+            self.update, size_in=size_in, size_out=0)
+
+    def update(self, t, x):
+        """update called with each step of the simulation"""
+        self.print_fun(x)

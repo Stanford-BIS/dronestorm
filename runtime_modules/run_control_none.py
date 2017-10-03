@@ -11,7 +11,7 @@ from dronestorm.comm.rx_util import clip_rx
 from dronestorm.print_util import print_control_none_header, print_control_none_data
 
 def run_control_none():
-    """Function to forward the control signals
+    """Function to forward the receiver signals to the control signals
 
     Reads receiver data from redis database
     sets command data to receiver data clipped to [-1, 1]
