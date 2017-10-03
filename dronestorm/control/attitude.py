@@ -13,8 +13,8 @@ class AttitudePD(object):
     pitch_kd: control constant proportional to pitch error derivative
     """
     def __init__(self, roll_kp, roll_kd, pitch_kp, pitch_kd):
-        self.roll_controller = PDController(roll_kp, roll_kd, None, 1)
-        self.pitch_controller = PDController(pitch_kp, pitch_kd, None, 1)
+        self.roll_controller = PDController(roll_kp, roll_kd, out_limit=1)
+        self.pitch_controller = PDController(pitch_kp, pitch_kd, out_limit=1)
 
     def step(self, state, dstate, ref, dref):
         """Step the controllers

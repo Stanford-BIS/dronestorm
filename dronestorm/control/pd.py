@@ -31,6 +31,7 @@ class PDController(object):
         self.kp = kp
         self.kd = kd
 
+        assert ref0 is not None
         self.ref0 = ref0
         self.center_error = center_error
         if out_limit is not None:

@@ -1,7 +1,7 @@
 """Compute attitude controlling outputs during runtime
 
 run from terminal with
-`python run_attitude_control.py`
+`python run_control_attitude.py`
 """
 from __future__ import print_function
 from dronestorm.redis_util import DBRedis
