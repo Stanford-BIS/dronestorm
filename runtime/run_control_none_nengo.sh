@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script for running runtime_modules/run_control_none.py
+# Script for running runtime_modules/run_control_none_nengo.py
 
 TMUX_SESSION_NAME=run_control_none_nengo
 CURDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"

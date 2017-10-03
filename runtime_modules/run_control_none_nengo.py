@@ -9,7 +9,7 @@ from dronestorm.redis_util import DBRedis, REDIS_RX_CHANNEL
 import dronestorm.redis_util as redis_util
 from dronestorm.comm.rx_util import clip_rx
 from dronestorm.print_util import print_control_none_header
-from dronestorm.control.nengo import create_control_none_nengo
+from dronestorm.control.nengo_controllers import create_control_none_nengo
 from dronestorm.nengo_util import run_nengo_realtime
 
 def run_control_none_nengo():
