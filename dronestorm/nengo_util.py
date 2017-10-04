@@ -9,6 +9,9 @@ import dronestorm.comm.redis_util as redis_util
 # determine using benchmark/benchmark_sleep.py
 MIN_SLEEP = 0.001
 
+ATTITUDE_SCALE = 180.
+ATTITUDE_SCALE_INV = 1./ATTITUDE_SCALE
+
 def _print_run_nengo_realtime_stats(
         dt_target, dt_measured, dt_measured_full, idx):
     """Print the runtime stats of a run_nengo_realtime simulation"""
@@ -29,7 +32,8 @@ def _print_run_nengo_realtime_stats(
         n_samples, dt_mean, dt_median, dt_std, dt_std/dt_mean, dt_mean/dt_target))
 
 def run_nengo_realtime(
-        nengo_sim, sim_stop_time=None, print_runtime_stats=True):
+        nengo_sim, sim_stop_time=None,
+        print_runtime_stats=True, save_data=None):
     """Runs a nengo simulation in as close to real time as possible
 
     If a simulation step runs faster than real time, throttle
@@ -43,16 +47,19 @@ def run_nengo_realtime(
     ------
     nengo_sim: nengo.Simulator instance
         simulator to run
-
     sim_stop_time: None or float
         stop time of the simulator.
         if None, will run until interrupted, for example, with a ctrl-c
-
     print_runtime_stats : bool
         whether to print out the runtime stats after the simulation ends
+    save_data: dict {probe object: filename, ...}
+        dictionary of nengo probe data to save and which file to save to
     """
     assert isinstance(nengo_sim, nengo.Simulator), (
         "must pass in a nengo.Simulator instance to run_nengo_realtime")
+    if save_data is not None:
+        assert isinstance(save_data, dict), (
+            "save_data must a dictionary mapping probe objects to filenames")
 
     t_cur = 0
     t_stop = 0
@@ -91,6 +98,16 @@ def run_nengo_realtime(
         _print_run_nengo_realtime_stats(
             dt_target, dt_measured, dt_measured_full, idx)
 
+    if save_data is not None:
+        for p_obj, fname in save_data.items():
+            print(nengo_sim.data[p_obj].shape)
+            print(nengo_sim.trange().shape)
+            np.savetxt(
+                fname,
+                np.hstack((nengo_sim.trange().reshape(-1,1), nengo_sim.data[p_obj])),
+                fmt="%.4f")
+
+
 class RedisNodeGetAttitude(nengo.Node):
     """nengo Node for getting attitude data from redis"""
     def __init__(self, dbredis):
@@ -100,7 +117,22 @@ class RedisNodeGetAttitude(nengo.Node):
 
     def update(self, t):
         """update called with each step of the simulation"""
-        return np.array(redis_util.get_attitude(self.dbredis))
+        raw_attitude = np.array(redis_util.get_attitude(self.dbredis))
+        scaled_attitude = raw_attitude * ATTITUDE_SCALE_INV
+        return scaled_attitude
+
+class RedisNodeGet(nengo.Node):
+    """nengo Node for getting attitude data from redis"""
+    def __init__(self, dbredis, redis_key, value_fun=None, size_out=1):
+        self.dbredis = dbredis
+        self.redis_key = redis_key
+        self.value_fun = value_fun
+        super(RedisNodeGet, self).__init__(
+            self.update, size_in=0, size_out=size_out)
+
+    def update(self, t):
+        """update called with each step of the simulation"""
+        return np.array(redis_util.get_key(self.dbredis))
 
 class RedisNodeGetRx(nengo.Node):
     """nengo Node for getting normalized receiver data from redis"""

@@ -245,6 +245,23 @@ def get_imu(db_redis):
     imu_dat = db_redis.rdb_pipe.execute()
     return list(map(int, imu_dat))
 
+def get_key(db_redis, key, value_fun=None):
+    """Generic redis get command
+    
+    Inputs
+    ------
+    key: string
+        redis database key
+    value_fun: callable or None
+        if not None, will be called on value returned by redis
+        redis returns the value as a string
+        for example, pass in int to cast the value as an int
+    """
+    value = db_redis.rdb.get(key)
+    if value_fun is not None:
+        value = value_fun(value)
+    return value
+
 def get_rx(db_redis):
     """Get the receiver data
 
