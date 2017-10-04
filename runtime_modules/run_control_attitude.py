@@ -8,6 +8,7 @@ from dronestorm.comm.redis_util import DBRedis
 import dronestorm.comm.redis_util as redis_util
 from  dronestorm.comm.redis_util import REDIS_RX_CHANNEL, REDIS_ATTITUDE_CHANNEL, REDIS_IMU_CHANNEL
 from dronestorm.control.attitude import AttitudePD
+from dronestorm.print_util import print_control_header, print_control_data
 
 def run_attitude_control():
     """Function to compute the control signals for attitude control
@@ -24,6 +25,7 @@ def run_attitude_control():
 
     try:
         print("Running attitude control...Ctrl-c to stop")
+        print_control_header()
         while True:
             # check for new receiver or attitude data
             db_notice = db_sub.get_message(timeout=10)
@@ -40,6 +42,7 @@ def run_attitude_control():
                 aux1, aux2 = rx_data[4:]
                 cmd = [throttle, droll_cmd, dpitch_cmd, dyaw_cmd, aux1, aux2]
                 redis_util.set_cmd(db_redis, cmd)
+                print_control_data(rx, cmd)
     except KeyboardInterrupt:
         print("\nInterrupt received: stopping attitude control...")
 

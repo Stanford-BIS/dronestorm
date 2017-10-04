@@ -8,7 +8,7 @@ import os
 from dronestorm.comm.redis_util import DBRedis, REDIS_RX_CHANNEL
 import dronestorm.comm.redis_util as redis_util
 from dronestorm.comm.rx_util import clip_rx
-from dronestorm.print_util import print_control_none_header, print_control_none_data
+from dronestorm.print_util import print_control_header, print_control_data
 
 def run_control_none():
     """Function to forward the receiver signals to the control signals
@@ -22,7 +22,7 @@ def run_control_none():
     db_sub = db_redis.subscribe([REDIS_RX_CHANNEL])
 
     print("Running control_none...Ctrl-c to stop")
-    print_control_none_header()
+    print_control_header()
     try:
         while True:
             # check for new receiver or attitude data
@@ -36,7 +36,7 @@ def run_control_none():
                 clip_rx(cmd)
 
                 redis_util.set_cmd(db_redis, cmd)
-                print_control_none_data(rx, cmd)
+                print_control_data(rx, cmd)
     except KeyboardInterrupt:
         print("\nInterrupt received: stopping control...")
 

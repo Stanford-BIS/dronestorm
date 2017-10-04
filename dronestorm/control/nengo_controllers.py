@@ -1,12 +1,12 @@
 """Module for nengo control networks"""
 import dronestorm.comm.redis_util as redis_util
 from dronestorm.nengo_util import RedisNodeGetRx, RedisNodeSetCmd, PrintNode
-from dronestorm.print_util import print_control_none_data
+from dronestorm.print_util import print_control_data
 import nengo
 
 def print_wrapper(rx_cmd):
-    """Wrapped print_control_none_data"""
-    print_control_none_data(rx_cmd[:6], rx_cmd[6:])
+    """Wrapped print_control_data"""
+    print_control_data(rx_cmd[:6], rx_cmd[6:])
 
 def create_control_none_nengo(sim_dt=0.005, syn_tau=0.005):
     """Create a nengo network to foward receiver data to command data

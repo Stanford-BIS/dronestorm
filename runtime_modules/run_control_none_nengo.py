@@ -24,7 +24,7 @@ def run_control_none_nengo():
     nengo_sim = create_control_none_nengo(sim_dt=0.005, syn_tau=0.005)
 
     print("Running control_none_nengo...Ctrl-c to stop")
-    print_control_none_header()
+    print_control_header()
     run_nengo_realtime(nengo_sim)
 
 if __name__ == "__main__":

@@ -41,6 +41,9 @@ REDIS_IMU_DDY = "IMU_DDY"
 REDIS_IMU_DDZ = "IMU_DDZ"
 REDIS_IMU_CHANNEL = "IMU"
 
+# GPS data
+REDIS_GPS_CHANNEL = "GPS"
+
 # State estimation data
 # When we want to estimate our state based on the sensor readings
 REDIS_STATE_EST_X = "STATE_EST_X"
