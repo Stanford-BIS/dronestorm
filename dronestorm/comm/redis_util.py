@@ -326,6 +326,43 @@ def set_attitude(db_redis, attitude_data):
     db_redis.rdb_pipe.execute()
     db_redis.rdb.publish(REDIS_ATTITUDE_CHANNEL, 1)
 
+def set_cmd(db_redis, cmd_data):
+    """Set the Command data in normaed units and notify REDIS_CMD subscribers
+
+    Inputs
+    ------
+    cmd_data : list of float
+        Follows the MultiWii Serial Protocol channel indexing
+        [throttle, droll, dpitch, dyaw, aux1, aux2]
+    """
+    assert len(cmd_data) == 6, "cmd_data must be list of 6 ints"
+    db_redis.rdb_pipe.set(REDIS_CMD_THROTTLE, cmd_data[MSP_THROTTLE_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_DROLL, cmd_data[MSP_DROLL_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_DPITCH, cmd_data[MSP_DPITCH_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_DYAW, cmd_data[MSP_DYAW_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_AUX1, cmd_data[MSP_AUX1_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_AUX2, cmd_data[MSP_AUX2_IDX])
+    db_redis.rdb_pipe.execute()
+    db_redis.rdb.publish(REDIS_CMD_CHANNEL, 1)
+
+def set_cmd_rc(db_redis, cmd_rc_data):
+    """Set the Command data in RC units and notify REDIS_CMD_RC subscribers
+
+    Inputs
+    ------
+    cmd_data : list of ints
+        [throttle, droll, dpitch, dyaw, aux1, aux2]
+    """
+    assert len(cmd_rc_data) == 6, "cmd_data must be list of 6 ints"
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_THROTTLE, cmd_rc_data[MSP_THROTTLE_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_DROLL, cmd_rc_data[MSP_DROLL_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_DPITCH, cmd_rc_data[MSP_DPITCH_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_DYAW, cmd_rc_data[MSP_DYAW_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_AUX1, cmd_rc_data[MSP_AUX1_IDX])
+    db_redis.rdb_pipe.set(REDIS_CMD_RC_AUX2, cmd_rc_data[MSP_AUX2_IDX])
+    db_redis.rdb_pipe.execute()
+    db_redis.rdb.publish(REDIS_CMD_RC_CHANNEL, 1)
+
 def set_imu(db_redis, imu_data):
     """Set the IMU data and notify REDIS_IMU subscribers
 
