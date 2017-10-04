@@ -33,13 +33,29 @@ REDIS_ATTITUDE_CHANNEL = "ATTITUDE"
 # IMU data
 # gyroscope provides roll pitch yaw rates,
 # accelerometer provides x y z accelerations
-REDIS_IMU_DROLL = "IMU_ROLL"
-REDIS_IMU_DPITCH = "IMU_PITCH"
-REDIS_IMU_DYAW = "IMU_YAW"
-REDIS_IMU_DDX = "IMU_X"
-REDIS_IMU_DDY = "IMU_Y"
-REDIS_IMU_DDZ = "IMU_Z"
+REDIS_IMU_DROLL = "IMU_DROLL"
+REDIS_IMU_DPITCH = "IMU_DPITCH"
+REDIS_IMU_DYAW = "IMU_DYAW"
+REDIS_IMU_DDX = "IMU_DDX"
+REDIS_IMU_DDY = "IMU_DDY"
+REDIS_IMU_DDZ = "IMU_DDZ"
 REDIS_IMU_CHANNEL = "IMU"
+
+# State estimation data
+# When we want to estimate our state based on the sensor readings
+REDIS_STATE_EST_X = "STATE_EST_X"
+REDIS_STATE_EST_Y = "STATE_EST_Y"
+REDIS_STATE_EST_Z = "STATE_EST_Z"
+REDIS_STATE_EST_ROLL = "STATE_EST_ROLL"
+REDIS_STATE_EST_PITCH = "STATE_EST_PITCH"
+REDIS_STATE_EST_YAW = "STATE_EST_YAW"
+REDIS_STATE_EST_DX = "STATE_EST_X"
+REDIS_STATE_EST_DY = "STATE_EST_Y"
+REDIS_STATE_EST_DZ = "STATE_EST_Z"
+REDIS_STATE_EST_OMEGA_X = "STATE_EST_WX"
+REDIS_STATE_EST_OMEGA_Y = "STATE_EST_WY"
+REDIS_STATE_EST_OMEGA_Z = "STATE_EST_WZ"
+REDIS_STATE_EST_CHANNEL = "STATE_EST"
 
 # RX inputs in RC units
 # We receive droll dpitch dyaw throttle aux1 aux2 from the rc receiver
@@ -151,6 +167,19 @@ class DBRedis(object):
         self.rdb.set(REDIS_SONAR_DOWN, 0)
         self.rdb.set(REDIS_SONAR_FRONT, 0)
         self.rdb.set(REDIS_SONAR_BACK, 0)
+        # State estimate
+        self.rdb.set(REDIS_STATE_EST_X, 0)
+        self.rdb.set(REDIS_STATE_EST_Y, 0)
+        self.rdb.set(REDIS_STATE_EST_Z, 0)
+        self.rdb.set(REDIS_STATE_EST_ROLL, 0)
+        self.rdb.set(REDIS_STATE_EST_PITCH, 0)
+        self.rdb.set(REDIS_STATE_EST_YAW, 0)
+        self.rdb.set(REDIS_STATE_EST_DX, 0)
+        self.rdb.set(REDIS_STATE_EST_DY, 0)
+        self.rdb.set(REDIS_STATE_EST_DZ, 0)
+        self.rdb.set(REDIS_STATE_EST_OMEGA_X, 0)
+        self.rdb.set(REDIS_STATE_EST_OMEGA_Y, 0)
+        self.rdb.set(REDIS_STATE_EST_OMEGA_Z, 0)
 
     def subscribe(self, chans):
         """Create a pubsub object
@@ -182,6 +211,21 @@ def get_attitude(db_redis):
     db_redis.rdb_pipe.get(REDIS_ATTITUDE_YAW)
     imu_dat = db_redis.rdb_pipe.execute()
     return list(map(float, imu_dat))
+
+def get_cmd(db_redis):
+    """Get the Command data
+
+    Returns the list of command data
+        [throttle, droll, dpitch, dyaw, aux1, aux2]
+    """
+    db_redis.rdb_pipe.get(REDIS_CMD_THROTTLE)
+    db_redis.rdb_pipe.get(REDIS_CMD_DROLL)
+    db_redis.rdb_pipe.get(REDIS_CMD_DPITCH)
+    db_redis.rdb_pipe.get(REDIS_CMD_DYAW)
+    db_redis.rdb_pipe.get(REDIS_CMD_AUX1)
+    db_redis.rdb_pipe.get(REDIS_CMD_AUX2)
+    cmd_data = db_redis.rdb_pipe.execute()
+    return list(map(float, cmd_data))
 
 def get_imu(db_redis):
     """Get the IMU data
@@ -228,23 +272,8 @@ def get_rx_rc(db_redis):
     rx_data = db_redis.rdb_pipe.execute()
     return list(map(int, rx_data))
 
-def get_cmd(db_redis):
-    """Get the Command data
-
-    Returns the list of command data
-        [throttle, droll, dpitch, dyaw, aux1, aux2]
-    """
-    db_redis.rdb_pipe.get(REDIS_CMD_THROTTLE)
-    db_redis.rdb_pipe.get(REDIS_CMD_DROLL)
-    db_redis.rdb_pipe.get(REDIS_CMD_DPITCH)
-    db_redis.rdb_pipe.get(REDIS_CMD_DYAW)
-    db_redis.rdb_pipe.get(REDIS_CMD_AUX1)
-    db_redis.rdb_pipe.get(REDIS_CMD_AUX2)
-    cmd_data = db_redis.rdb_pipe.execute()
-    return list(map(float, cmd_data))
-
 def get_sonar(db_redis):
-    """Get the Sonar data
+    """Get the sonar data
 
     Returns the list of sonar data
         [down, front, back]
@@ -254,6 +283,26 @@ def get_sonar(db_redis):
     db_redis.rdb_pipe.get(REDIS_SONAR_BACK)
     sonar_data = db_redis.rdb_pipe.execute()
     return list(map(int, sonar_data))
+
+def get_state_estimate(db_redis):
+    """get the state estimate data
+
+    Returns list of state estimates
+        [x, y, z, roll, pitch, yaw, dx, dy, dz, omega_x, omega_y, omega_z]
+    """
+    db_redis.rdb.pipe.get(REDIS_STATE_EST_X)
+    db_redis.rdb.pipe.get(REDIS_STATE_EST_Y)
+    db_redis.rdb.pipe.get(REDIS_STATE_EST_Z)
+    db_redis.rdb.pipe.get(REDIS_STATE_EST_ROLL)
+    db_redis.rdb.pipe.get(REDIS_STATE_EST_PITCH)
+    db_redis.rdb.pipe.get(REDIS_STATE_EST_YAW)
+    db_redis.rdb.pipe.get(REDIS_STATE_EST_DX)
+    db_redis.rdb.pipe.get(REDIS_STATE_EST_DY)
+    db_redis.rdb.pipe.get(REDIS_STATE_EST_DZ)
+    db_redis.rdb.pipe.get(REDIS_STATE_EST_OMEGA_X)
+    db_redis.rdb.pipe.get(REDIS_STATE_EST_OMEGA_Y)
+    db_redis.rdb.pipe.get(REDIS_STATE_EST_OMEGA_Z)
+    return list(map(float(db_redis.rdb_pipe.execute())))
 
 ###############################################################################
 # setter utilities ############################################################
@@ -330,45 +379,8 @@ def set_rx_rc(db_redis, rx_rc_data):
     db_redis.rdb_pipe.execute()
     db_redis.rdb.publish(REDIS_RX_RC_CHANNEL, 1)
 
-def set_cmd(db_redis, cmd_data):
-    """Set the Command data in normaed units and notify REDIS_CMD subscribers
-
-    Inputs
-    ------
-    cmd_data : list of float
-        Follows the MultiWii Serial Protocol channel indexing
-        [throttle, droll, dpitch, dyaw, aux1, aux2]
-    """
-    assert len(cmd_data) == 6, "cmd_data must be list of 6 ints"
-    db_redis.rdb_pipe.set(REDIS_CMD_THROTTLE, cmd_data[MSP_THROTTLE_IDX])
-    db_redis.rdb_pipe.set(REDIS_CMD_DROLL, cmd_data[MSP_DROLL_IDX])
-    db_redis.rdb_pipe.set(REDIS_CMD_DPITCH, cmd_data[MSP_DPITCH_IDX])
-    db_redis.rdb_pipe.set(REDIS_CMD_DYAW, cmd_data[MSP_DYAW_IDX])
-    db_redis.rdb_pipe.set(REDIS_CMD_AUX1, cmd_data[MSP_AUX1_IDX])
-    db_redis.rdb_pipe.set(REDIS_CMD_AUX2, cmd_data[MSP_AUX2_IDX])
-    db_redis.rdb_pipe.execute()
-    db_redis.rdb.publish(REDIS_CMD_CHANNEL, 1)
-
-def set_cmd_rc(db_redis, cmd_rc_data):
-    """Set the Command data in RC units and notify REDIS_CMD_RC subscribers
-
-    Inputs
-    ------
-    cmd_data : list of ints
-        [throttle, droll, dpitch, dyaw, aux1, aux2]
-    """
-    assert len(cmd_rc_data) == 6, "cmd_data must be list of 6 ints"
-    db_redis.rdb_pipe.set(REDIS_CMD_RC_THROTTLE, cmd_rc_data[MSP_THROTTLE_IDX])
-    db_redis.rdb_pipe.set(REDIS_CMD_RC_DROLL, cmd_rc_data[MSP_DROLL_IDX])
-    db_redis.rdb_pipe.set(REDIS_CMD_RC_DPITCH, cmd_rc_data[MSP_DPITCH_IDX])
-    db_redis.rdb_pipe.set(REDIS_CMD_RC_DYAW, cmd_rc_data[MSP_DYAW_IDX])
-    db_redis.rdb_pipe.set(REDIS_CMD_RC_AUX1, cmd_rc_data[MSP_AUX1_IDX])
-    db_redis.rdb_pipe.set(REDIS_CMD_RC_AUX2, cmd_rc_data[MSP_AUX2_IDX])
-    db_redis.rdb_pipe.execute()
-    db_redis.rdb.publish(REDIS_CMD_RC_CHANNEL, 1)
-
 def set_sonar(db_redis, sonar_data):
-    """Set the Sonar data and notify REDIS_SONAR subscribers of new data
+    """Set the sonar data and notify REDIS_SONAR subscribers of new data
 
     Inputs
     ------
@@ -380,3 +392,26 @@ def set_sonar(db_redis, sonar_data):
     db_redis.rdb_pipe.set(REDIS_SONAR_BACK, sonar_data[2])
     db_redis.rdb_pipe.execute()
     db_redis.rdb.publish(REDIS_SONAR_CHANNEL, 1)
+
+def set_state_estimate(db_redis, state_est):
+    """Set the state estimate data and notify REDIS_STATE_EST subscribers of new data
+
+    Inputs
+    ------
+    state_est : list of floats
+        [x, y, z, roll, pitch, yaw, dx, dy, dz, omega_x, omega_y, omega_z]
+    """
+    db_redis.rdb.pipe.set(REDIS_STATE_EST_X, state_est[0])
+    db_redis.rdb.pipe.set(REDIS_STATE_EST_Y, state_est[1])
+    db_redis.rdb.pipe.set(REDIS_STATE_EST_Z, state_est[2])
+    db_redis.rdb.pipe.set(REDIS_STATE_EST_ROLL, state_est[3])
+    db_redis.rdb.pipe.set(REDIS_STATE_EST_PITCH, state_est[4])
+    db_redis.rdb.pipe.set(REDIS_STATE_EST_YAW, state_est[5])
+    db_redis.rdb.pipe.set(REDIS_STATE_EST_DX, state_est[6])
+    db_redis.rdb.pipe.set(REDIS_STATE_EST_DY, state_est[7])
+    db_redis.rdb.pipe.set(REDIS_STATE_EST_DZ, state_est[8])
+    db_redis.rdb.pipe.set(REDIS_STATE_EST_OMEGA_X, state_est[9])
+    db_redis.rdb.pipe.set(REDIS_STATE_EST_OMEGA_Y, state_est[10])
+    db_redis.rdb.pipe.set(REDIS_STATE_EST_OMEGA_Z, state_est[11])
+    db_redis.rdb_pipe.execute()
+    db_redis.rdb.publish(REDIS_STATE_EST_CHANNEL, 1)
