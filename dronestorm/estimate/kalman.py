@@ -4,7 +4,29 @@ from state_matrix import *
 from sensors import *
 
 class EKF: 
-    """Extended Kalman filter"""
+    """Extended Kalman filter
+    
+
+    dmu/dt = 
+
+    Parameters
+    ----------
+    R: 
+        noise covariance matrix. estimate of white noise
+
+    Attributes
+    ----------
+    mu: 12 entry numpy column vector
+        current state estimate
+        [x, y, z, roll, pitch, yaw, dx, dy, dz, w_roll, w_pitch, w_yaw]
+    sigma:
+        current belief covariance 
+    R
+        plant noise covariance
+    Q:
+        sensor noise covariance
+    Q_idx
+    """
     def __init__(self, R):
         self.mu = np.zeros([12, 1])
         self.sigma = np.eye(12)*0.01
@@ -20,13 +42,15 @@ class EKF:
         # self.Zagl0 = Zagl
     
     def predict(self, U, dt):
-        mud = x_dot(self.mu, U)
+        mud = x_dot(self.mu, U) # dmu/dt
         mu_ = self.mu + mud*dt
+        # linarize around current mu for predicted sigma
         A, _, _, _ = state_matrix(self.mu, U, mud)
         sigma_ = (A.dot(self.sigma)).dot(A.T) + self.R
         return mu_, sigma_
     
     def update(self, mu_, sigma_, U, sensors=None, measurements=None):
+        """Correction step"""
         if sensors is not None: 
             for i, sensor in enumerate(sensors): 
                 z_i = self.sensor_idx[i](mu_, U, self.Z0[i])
@@ -57,9 +81,9 @@ class EKF:
                     Q = np.hstack([Q, Q__])
                 else:
                     Q = self.Q_idx[i]
-                y = z - z_ 
+                y = z - z_  # predicted - measured
                 S = H.dot(sigma_).dot(H.T) + Q 
-                K = sigma_.dot(H.T).dot(np.linalg.inv(S))
+                K = sigma_.dot(H.T).dot(np.linalg.inv(S)) # optimal Kalman gain
                 self.mu = mu_ + K.dot(y)
                 self.sigma = (np.eye(12) - K.dot(H)).dot(sigma_)
         else:

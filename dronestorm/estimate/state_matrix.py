@@ -18,6 +18,7 @@ def rot(phi, theta, psi):
     return R 
 
 def x_dot(X, U):
+    """system dynamics"""
     R = rot(X[3], X[4], X[5]) # ZERO INDEXED...
     v_global = np.array([X[6],X[7],X[8]])
     v_body = R.dot(v_global)
