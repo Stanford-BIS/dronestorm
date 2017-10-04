@@ -91,6 +91,13 @@ class EKF:
             self.sigma = sigma_
     
     def step(self, U, dt, sensors=None, measurements=None):
+        """Step the kalman filter
+
+        Parameters
+        ----------
+        U: prior motor command
+        dt: time step
+        """
         mu_, sigma_ = self.predict(U, dt)
         self.update(mu_, sigma_, sensors, measurements)
         return self.mu, self.sigma 
