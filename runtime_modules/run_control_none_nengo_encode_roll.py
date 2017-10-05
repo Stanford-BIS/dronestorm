@@ -21,11 +21,13 @@ def run_control_none_nengo_roll():
     """
     print(os.path.basename(__file__))
     db_redis = DBRedis()
-    nengo_sim, probe = create_control_none_nengo_encode_roll(sim_dt=0.005)
+    nengo_sim, probe, ens = create_control_none_nengo_encode_roll(sim_dt=0.005)
 
     print("Running control_none_nengo_roll...Ctrl-c to stop")
     print_control_header()
-    run_nengo_realtime(nengo_sim, save_data={probe: "../data/nengo.log"})
+    run_nengo_realtime(nengo_sim,
+        save_probe_data={probe: "../data/spikes.txt"},
+        save_tuning_curves={ens: "../data/tuning.txt"})
 
 if __name__ == "__main__":
     run_control_none_nengo_roll()

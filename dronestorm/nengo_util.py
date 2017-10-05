@@ -2,6 +2,7 @@
 from __future__ import print_function
 import time
 import nengo
+from nengo.utils.ensemble import tuning_curves
 import numpy as np
 import dronestorm.comm.redis_util as redis_util
 
@@ -33,7 +34,8 @@ def _print_run_nengo_realtime_stats(
 
 def run_nengo_realtime(
         nengo_sim, sim_stop_time=None,
-        print_runtime_stats=True, save_data=None):
+        print_runtime_stats=True,
+        save_probe_data=None, save_tuning_curves=None):
     """Runs a nengo simulation in as close to real time as possible
 
     If a simulation step runs faster than real time, throttle
@@ -52,14 +54,19 @@ def run_nengo_realtime(
         if None, will run until interrupted, for example, with a ctrl-c
     print_runtime_stats : bool
         whether to print out the runtime stats after the simulation ends
-    save_data: dict {probe object: filename, ...}
-        dictionary of nengo probe data to save and which file to save to
+    save_probe_data: dict or None
+        if not None, dictionary of {nengo probe object: filename to save to, ...}
+    save_tuning_curves: {ensemble object: file, ...} or None
+        if not None, dictionary of {nengo ensemble object: filename to save to, ...}
     """
     assert isinstance(nengo_sim, nengo.Simulator), (
         "must pass in a nengo.Simulator instance to run_nengo_realtime")
-    if save_data is not None:
-        assert isinstance(save_data, dict), (
-            "save_data must a dictionary mapping probe objects to filenames")
+    if save_probe_data is not None:
+        assert isinstance(save_probe_data, dict), (
+            "save_probe_data must a dictionary mapping probe objects to filenames")
+    if save_tuning_curves is not None:
+        assert isinstance(save_tuning_curves, dict), (
+            "save_tuning_curves must a dictionary mapping ensemble objects to filenames")
 
     t_cur = 0
     t_stop = 0
@@ -98,15 +105,18 @@ def run_nengo_realtime(
         _print_run_nengo_realtime_stats(
             dt_target, dt_measured, dt_measured_full, idx)
 
-    if save_data is not None:
-        for p_obj, fname in save_data.items():
-            print(nengo_sim.data[p_obj].shape)
-            print(nengo_sim.trange().shape)
+    if save_probe_data is not None:
+        for p_obj, fname in save_probe_data.items():
             np.savetxt(
                 fname,
                 np.hstack((nengo_sim.trange().reshape(-1,1), nengo_sim.data[p_obj])),
                 fmt="%.4f")
-
+    if save_tuning_curves:
+        for e_obj, fname in save_tuning_curves.items():
+            tuning_data = tuning_curves(e_obj, nengo_sim)
+            print(tuning_data[0].shape)
+            print(tuning_data[1].shape)
+            np.savetxt(fname, np.hstack((tuning_data[0], tuning_data[1])), fmt="%.3f")
 
 class RedisNodeGetAttitude(nengo.Node):
     """nengo Node for getting attitude data from redis"""

@@ -57,7 +57,8 @@ def create_control_none_nengo_encode_roll(sim_dt=0.005):
 
         attitude = RedisNodeGetAttitude(rdb)
         ens = nengo.Ensemble(
-            n_neurons=10, dimensions=1, neuron_type=nengo.LIF())
+            n_neurons=10, dimensions=1,
+            neuron_type=nengo.LIF(), max_rates=nengo.dists.Uniform(5, 30))
         nengo.Connection(attitude[0], ens, synapse=None)
         ens_probe = nengo.Probe(ens.neurons)
 
@@ -66,4 +67,4 @@ def create_control_none_nengo_encode_roll(sim_dt=0.005):
         nengo.Connection(rx_signals_in, print_node[6:], synapse=None)
 
     sim = nengo.Simulator(net, sim_dt, progress_bar=False)
-    return sim, ens_probe
+    return sim, ens_probe, ens
