@@ -23,7 +23,7 @@ pi.set_mode(sonar_status_pin, pigpio.INPUT)
 pi.set_pull_up_down(sonar_status_pin, pigpio.PUD_OFF)
 pi.set_pull_up_down(i2c_sda_pin, pigpio.PUD_UP)
 pi.set_pull_up_down(i2c_scl_pin, pigpio.PUD_UP)
-h = pi.i2c_open(1, 0x71)
+h = pi.i2c_open(1, 0x70)
 
 def wait_for_ready():
     # wait for status pin to go low
