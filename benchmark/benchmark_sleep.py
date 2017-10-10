@@ -1,4 +1,4 @@
-"""Benchmark the Python sleep fucntion
+"""Benchmark the Python sleep function
 
 The accuracy of sleep() time depends on the underlying os.
 Run this benchmark to determine the capacity of your system
