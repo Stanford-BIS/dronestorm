@@ -4,13 +4,14 @@ The accuracy of sleep() time depends on the underlying os.
 Run this benchmark to determine the capacity of your system
 """
 import time
+import timeit
 import numpy as np
 
 def time_sleep(amount):
     """time the runtime of sleep"""
-    start = time.time()
+    start = timeit.default_timer()
     time.sleep(amount)
-    end = time.time()
+    end = timeit.default_timer()
     delta = end-start
     return delta
 
@@ -29,7 +30,7 @@ def plot_data(tgt_sleep, measured_sleep):
     """plot the benchmark data"""
     import matplotlib.pyplot as plt
     fig = plt.figure()
-    ax = fig.subplots(1, 1)
+    ax = fig.add_subplot(111)
     min_sleep = np.min([tgt_sleep, measured_sleep])
     max_sleep = np.max([tgt_sleep, measured_sleep])
     ax.loglog(tgt_sleep, measured_sleep, 'o')

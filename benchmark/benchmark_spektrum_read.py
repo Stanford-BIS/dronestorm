@@ -2,6 +2,7 @@
 # benchmark the Spektrum protocol communication
 from __future__ import print_function
 import time
+import timeit
 import numpy as np
 from dronestorm.comm import SpektrumRemoteReceiver
 
@@ -16,9 +17,9 @@ dt_read = np.zeros(N)
 rrx = SpektrumRemoteReceiver()
 rrx.align_serial()
 for n in range(N):
-    start = time.time()
+    start = timeit.default_timer()
     rrx.read_data()
-    dt_read[n] = time.time()-start
+    dt_read[n] = timeit.default_timer()-start
 mean_dt_read = np.mean(dt_read)
 median_dt_read = np.median(dt_read)
 std_dt_read = np.std(dt_read)

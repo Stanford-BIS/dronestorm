@@ -1,6 +1,7 @@
 """Tests the spektrum communication module"""
 from __future__ import print_function
 import time
+import timeit
 import numpy as np
 from dronestorm.comm import SpektrumRemoteReceiver
 
@@ -18,10 +19,10 @@ try:
     data = [1300 + i*100 for i in range(6)]
     idx = 0
     while True:
-        start = time.time()
+        start = timeit.default_timer()
         rrx.write_data(data)
         time.sleep(MIN_WRITE_DT)
-        dt_write[idx] = time.time() - start
+        dt_write[idx] = timeit.default_timer() - start
         idx = (idx+1) % N
 except(KeyboardInterrupt, SystemExit):
     rrx.close_serial()
