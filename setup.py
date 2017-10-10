@@ -39,7 +39,6 @@ setup(
     install_requires=[
         'pyserial>=3.0',
         'pigpio>=1.35',
-        'adafruit-pca9685>=1.0',
         'numpy>=1.7',
         'nengo>=2.4.0',
         'redis>=2.10.6',
