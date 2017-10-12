@@ -1,4 +1,5 @@
 """Module for nengo control networks"""
+import numpy as np
 import dronestorm.comm.redis_util as redis_util
 from dronestorm.nengo_util import (
     RedisNodeGetAttitude, RedisNodeGetRx, RedisNodeSetCmd, PrintNode)
@@ -57,8 +58,9 @@ def create_control_none_nengo_encode_roll(sim_dt=0.005):
 
         attitude = RedisNodeGetAttitude(rdb)
         ens = nengo.Ensemble(
-            n_neurons=10, dimensions=1,
-            neuron_type=nengo.LIF(), max_rates=nengo.dists.Uniform(5, 30))
+            n_neurons=2, dimensions=1, neuron_type=nengo.LIF(),
+            max_rates=np.array([50, 50]), encoders=np.array([[-1], [1]]),
+            intercepts=np.array([0., 0.]))
         nengo.Connection(attitude[0], ens, synapse=None)
         ens_probe = nengo.Probe(ens.neurons)
 

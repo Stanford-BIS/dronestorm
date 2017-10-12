@@ -8,7 +8,6 @@ import os
 import sys
 from dronestorm.sense.sonar_maxbotix import SonarMaxbotix
 from dronestorm.comm.redis_util import DBRedis, set_sonar
-from dronestorm.comm.redis_util import REDIS_SONAR_DOWN, REDIS_SONAR_CHANNEL
 
 def run_sonar_maxbotix():
     print(os.path.basename(__file__))

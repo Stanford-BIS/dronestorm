@@ -58,5 +58,5 @@ def load_and_plot_data(fname):
 
 if __name__ == "__main__":
     run_benchmark()
-    # run_benchmark(save="benchmark_sleep_data.txt")
+    # run_benchmark(save="benchmark_sleep_data.txt", plot=False)
     # load_and_plot_data("benchmark_sleep_data.txt")

@@ -26,8 +26,8 @@ def run_control_none_nengo_roll():
     print("Running control_none_nengo_roll...Ctrl-c to stop")
     print_control_header()
     run_nengo_realtime(nengo_sim,
-        save_probe_data={probe: "../data/spikes.txt"},
-        save_tuning_curves={ens: "../data/tuning.txt"})
+        save_probe_data={probe: "../../data/spikes.txt"},
+        save_tuning_curves={ens: "../../data/tuning.txt"})
 
 if __name__ == "__main__":
     run_control_none_nengo_roll()
