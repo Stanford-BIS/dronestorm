@@ -5,7 +5,7 @@ from scipy.signal import convolve
 from scipy.io.wavfile import read as wav_read
 from scipy.io.wavfile import write as wav_write
 
-AUDIO_SAMPLE_RATE = 44100 # standard 48kHz recording rate
+AUDIO_SAMPLE_RATE = 44100 # standard 44.1kHz recording rate
 AUDIO_SAMPLE_DT = 1./AUDIO_SAMPLE_RATE
 
 def spike_wav(

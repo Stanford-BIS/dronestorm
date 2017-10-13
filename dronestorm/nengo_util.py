@@ -112,10 +112,10 @@ def run_nengo_realtime(
                 np.hstack((nengo_sim.trange().reshape(-1,1), nengo_sim.data[p_obj])),
                 fmt="%.4f")
     if save_tuning_curves:
-        for e_obj, fname in save_tuning_curves.items():
-            tuning_data = tuning_curves(e_obj, nengo_sim)
-            print(tuning_data[0].shape)
-            print(tuning_data[1].shape)
+        for ens_obj, fname in save_tuning_curves.items():
+            inputs = np.sort(
+                np.linspace(-1, 1).tolist() + nengo_sim.data[ens_obj].intercepts.tolist())
+            tuning_data = tuning_curves(ens_obj, nengo_sim, inputs=inputs)
             np.savetxt(fname, np.hstack((tuning_data[0], tuning_data[1])), fmt="%.3f")
 
 class RedisNodeGetAttitude(nengo.Node):
