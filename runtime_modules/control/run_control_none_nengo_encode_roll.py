@@ -5,12 +5,15 @@ run from terminal with
 """
 from __future__ import print_function
 import os
+import dronestorm
 from dronestorm.comm.redis_util import DBRedis, REDIS_ATTITUDE_ROLL
 import dronestorm.comm.redis_util as redis_util
 from dronestorm.comm.rx_util import clip_rx
 from dronestorm.print_util import print_control_header
 from dronestorm.control.nengo_controllers import create_control_none_nengo_encode_roll
 from dronestorm.nengo_util import run_nengo_realtime
+
+PACKAGE_PATH = os.path.dirname(dronestorm.__file__)
 
 def run_control_none_nengo_roll():
     """Function to forward the receiver signals to the control signals
@@ -26,8 +29,8 @@ def run_control_none_nengo_roll():
     print("Running control_none_nengo_roll...Ctrl-c to stop")
     print_control_header()
     run_nengo_realtime(nengo_sim,
-        save_probe_data={probe: "../../data/spikes.txt"},
-        save_tuning_curves={ens: "../../data/tuning.txt"})
+        save_probe_data={probe: PACKAGE_PATH + "/../data/spikes.txt"},
+        save_tuning_curves={ens: PACKAGE_PATH + "/../data/tuning.txt"})
 
 if __name__ == "__main__":
     run_control_none_nengo_roll()
