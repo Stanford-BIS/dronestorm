@@ -67,15 +67,23 @@ def spike_wav(
 
     if plot:
         spk_data_fig = plt.figure()
+        time_resampled = np.arange(n_resamples)*AUDIO_SAMPLE_DT
         if fname_spike_kernel is not None:
             ax = spk_data_fig.add_subplot(211)
-            ax.plot(spk_data_preconv)
+            ax.plot(time_resampled, spk_data_preconv)
+            ax.set_ylabel("raw spike waveform")
+            ax.set_title("spike waveforms")
             ax = spk_data_fig.add_subplot(212, sharex=ax)
-            ax.plot(spk_data)
+            ax.plot(time_resampled, spk_data)
+            ax.set_ylabel("filtered spike waveform")
+            ax.set_xlabel("time (s)")
 
+            time_kernel = np.arange(len(spk_kernel_data))*AUDIO_SAMPLE_DT
             spk_kernel_fig = plt.figure()
             ax = spk_kernel_fig.add_subplot(111)
-            ax.plot(spk_kernel_data)
+            ax.plot(time_kernel, spk_kernel_data)
+            ax.set_title("spike kernel waveform")
+            ax.set_xlabel("time (s)")
         else:
             ax = spk_data_fig.add_subplot(111)
             ax.plot(spk_data)
@@ -109,6 +117,6 @@ def plot_tuning(fname_tuning_data, fname_plot_out=None, **kwargs):
 
     if fname_plot_out is not None:
         assert isinstance(fname_plot_out, str)
-        plt.savefig()
+        plt.savefig(fname_plot_out)
     else:
         plt.show()
