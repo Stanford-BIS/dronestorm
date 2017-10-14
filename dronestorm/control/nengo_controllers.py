@@ -60,7 +60,7 @@ def create_control_none_nengo_encode_roll(sim_dt=0.005):
         ens = nengo.Ensemble(
             n_neurons=2, dimensions=1, neuron_type=nengo.LIF(),
             max_rates=np.array([50, 50]), encoders=np.array([[-1], [1]]),
-            intercepts=np.array([0., 0.]))
+            intercepts=np.array([0.05, 0.05]))
         nengo.Connection(attitude[0], ens, synapse=None)
         ens_probe = nengo.Probe(ens.neurons)
 

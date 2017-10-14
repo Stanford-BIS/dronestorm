@@ -114,7 +114,8 @@ def run_nengo_realtime(
     if save_tuning_curves:
         for ens_obj, fname in save_tuning_curves.items():
             inputs = np.sort(
-                np.linspace(-1, 1).tolist() + nengo_sim.data[ens_obj].intercepts.tolist())
+                np.linspace(-1, 1, 200).tolist()+nengo_sim.data[ens_obj].intercepts.tolist())
+            inputs = inputs.reshape((-1, 1))
             tuning_data = tuning_curves(ens_obj, nengo_sim, inputs=inputs)
             np.savetxt(fname, np.hstack((tuning_data[0], tuning_data[1])), fmt="%.3f")
 
