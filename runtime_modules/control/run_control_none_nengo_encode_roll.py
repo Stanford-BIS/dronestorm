@@ -14,8 +14,9 @@ from dronestorm.control.nengo_controllers import create_control_none_nengo_encod
 from dronestorm.nengo_util import run_nengo_realtime
 
 PACKAGE_PATH = os.path.dirname(dronestorm.__file__)
+DATADIR = PACKAGE_PATH + "/../data/"
 
-def run_control_none_nengo_roll():
+def run_control_none_nengo_encode_roll():
     """Function to forward the receiver signals to the control signals
 
     Reads receiver data from redis database
@@ -29,8 +30,9 @@ def run_control_none_nengo_roll():
     print("Running control_none_nengo_roll...Ctrl-c to stop")
     print_control_header()
     run_nengo_realtime(nengo_sim,
-        save_probe_data={probe: PACKAGE_PATH + "/../data/spikes.txt"},
-        save_tuning_curves={ens: PACKAGE_PATH + "/../data/tuning.txt"})
+        save_runtime_stats=DATADIR + "run_control_none_nengo_encode_roll_realtime_stats.txt",
+        save_probe_data={probe: DATADIR + "spikes.txt"},
+        save_tuning_curves={ens: DATADIR + "tuning.txt"})
 
 if __name__ == "__main__":
-    run_control_none_nengo_roll()
+    run_control_none_nengo_encode_roll()

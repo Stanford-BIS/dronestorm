@@ -16,8 +16,18 @@ ATTITUDE_SCALE = 180.
 ATTITUDE_SCALE_INV = 1./ATTITUDE_SCALE
 
 def _print_run_nengo_realtime_stats(
-        dt_target, dt_measured):
-    """Print the runtime stats of a run_nengo_realtime simulation"""
+        dt_target, dt_measured, save_runtime_stats):
+    """Print the runtime stats of a run_nengo_realtime simulation
+    
+    Inputs
+    ------
+    dt_target: float
+        targeted simulation dt
+    dt_measured: numpy array of floats
+        measured simulation dt
+    save_runtime_stats: string or None
+        if not None, filename of location to save runtime stats
+    """
     n_samples = len(dt_measured)
     dt_mean = np.mean(dt_measured)
     dt_median = np.median(dt_measured)
@@ -26,18 +36,24 @@ def _print_run_nengo_realtime_stats(
     n_fast = np.sum(ddt_measured > 0)
     n_slow = np.sum(ddt_measured < 0)
 
-    print("target dt: %.1fms"%(1000*dt_target))
-    print(
+    report = (
+        "target dt: %.1fms\n"%(1000*dt_target) +
         "measured dt (N=%d) "%(n_samples) +
-        "mean:%.3fms median:%.3fms std:%f.3ms std/mean:%.1f mean_dt/target_dt:%.1f"%(
-            1000*dt_mean, 1000*dt_median, 1000*dt_std, dt_std/dt_mean, dt_mean/dt_target))
-    print("simulation was " +
-          "fast on %d of %d (%.1f%%) steps and "%(n_fast, n_samples, 100*n_fast/n_samples) +
-          "slow on %d of %d (%.1f%%) steps"%(n_slow, n_samples, 100*n_slow/n_samples))
+        "mean:%.3fms median:%.3fms std:%f.3ms std/mean:%.1f mean_dt/target_dt:%.1f\n"%(
+            1000*dt_mean, 1000*dt_median, 1000*dt_std, dt_std/dt_mean, dt_mean/dt_target) +
+        "simulation was " +
+        "fast on %d of %d (%.1f%%) steps and "%(n_fast, n_samples, 100*n_fast/n_samples) +
+        "slow on %d of %d (%.1f%%) steps"%(n_slow, n_samples, 100*n_slow/n_samples))
+
+    print(report)
+    if save_runtime_stats:
+        assert isinstance(save_runtime_stats, str)
+        with open(save_runtime_stats, 'w') as fhandle:
+            fhandle.write(report)
 
 def run_nengo_realtime(
         nengo_sim,
-        print_runtime_stats=True,
+        print_runtime_stats=True, save_runtime_stats=None,
         save_probe_data=None, save_tuning_curves=None):
     """Runs a nengo simulation in as close to real time as possible
 
@@ -52,8 +68,10 @@ def run_nengo_realtime(
     ------
     nengo_sim: nengo.Simulator instance
         simulator to run
-    print_runtime_stats : bool
+    print_runtime_stats: bool
         whether to print out the runtime stats after the simulation ends
+    save_runtime_stats: string or None
+        if not None, filename of location to save runtime stats
     save_probe_data: dict or None
         if not None, dictionary of {nengo probe object: filename to save to, ...}
     save_tuning_curves: {ensemble object: file, ...} or None
@@ -85,7 +103,7 @@ def run_nengo_realtime(
         print("\nkeyboard interrupt detected; ending simulation")
 
     if print_runtime_stats:
-        _print_run_nengo_realtime_stats(dt_target, np.array(dt_measured))
+        _print_run_nengo_realtime_stats(dt_target, np.array(dt_measured), save_runtime_stats)
 
     if save_probe_data is not None:
         sim_time = nengo_sim.trange().reshape(-1, 1)
