@@ -24,7 +24,7 @@ def run_control_none_nengo_roll():
     """
     print(os.path.basename(__file__))
     db_redis = DBRedis()
-    nengo_sim, probe, ens = create_control_none_nengo_encode_roll(sim_dt=0.005)
+    nengo_sim, probe, ens = create_control_none_nengo_encode_roll(sim_dt=0.01)
 
     print("Running control_none_nengo_roll...Ctrl-c to stop")
     print_control_header()

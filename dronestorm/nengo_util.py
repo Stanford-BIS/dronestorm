@@ -1,5 +1,6 @@
 """This module defines helper functions to run nengo networks"""
 from __future__ import print_function
+from __future__ import division
 import time
 import timeit
 import nengo
@@ -21,13 +22,21 @@ def _print_run_nengo_realtime_stats(
     dt_mean = np.mean(dt_measured)
     dt_median = np.median(dt_measured)
     dt_std = np.std(dt_measured)
+    ddt_measured = dt_target - dt_measured
+    n_fast = np.sum(ddt_measured > 0)
+    n_slow = np.sum(ddt_measured < 0)
 
-    print("target dt: %fs"%dt_target)
-    print("measured dt (N=%d) mean:%fs median:%fs std:%fs std/mean:%f mean_dt/target_dt:%f"%(
-        n_samples, dt_mean, dt_median, dt_std, dt_std/dt_mean, dt_mean/dt_target))
+    print("target dt: %.1fms"%(1000*dt_target))
+    print(
+        "measured dt (N=%d) "%(n_samples) +
+        "mean:%.3fms median:%.3fms std:%f.3ms std/mean:%.1f mean_dt/target_dt:%.1f"%(
+            1000*dt_mean, 1000*dt_median, 1000*dt_std, dt_std/dt_mean, dt_mean/dt_target))
+    print("simulation was " +
+          "fast on %d of %d (%.1f%%) steps and "%(n_fast, n_samples, 100*n_fast/n_samples) +
+          "slow on %d of %d (%.1f%%) steps"%(n_slow, n_samples, 100*n_slow/n_samples))
 
 def run_nengo_realtime(
-        nengo_sim, sim_stop_time=None,
+        nengo_sim,
         print_runtime_stats=True,
         save_probe_data=None, save_tuning_curves=None):
     """Runs a nengo simulation in as close to real time as possible
@@ -43,9 +52,6 @@ def run_nengo_realtime(
     ------
     nengo_sim: nengo.Simulator instance
         simulator to run
-    sim_stop_time: None or float
-        stop time of the simulator.
-        if None, will run until interrupted, for example, with a ctrl-c
     print_runtime_stats : bool
         whether to print out the runtime stats after the simulation ends
     save_probe_data: dict or None
@@ -62,35 +68,28 @@ def run_nengo_realtime(
         assert isinstance(save_tuning_curves, dict), (
             "save_tuning_curves must a dictionary mapping ensemble objects to filenames")
 
-    t_cur = 0
-    t_stop = 0
-    if sim_stop_time is not None:
-        t_stop = sim_stop_time
-
     dt_target = nengo_sim.dt
     dt_measured = []
-    ddt = 0 # accumulation of dt_measured - dt_target
+    ddt_accumulated = 0 # accumulation of dt_measured - dt_target
 
     try:
-        while t_cur < t_stop or sim_stop_time is None:
+        while True:
             start = timeit.default_timer()
-            if ddt >= MIN_SLEEP:
-                time.sleep(ddt)
-                ddt = 0
+            if ddt_accumulated >= MIN_SLEEP:
+                time.sleep(ddt_accumulated)
+                ddt_accumulated = 0
             nengo_sim.step()
-            t_cur += dt_target
             dt_measured.append(timeit.default_timer() - start)
-            ddt += dt_target - dt_measured[-1]
-        print("nengo simulation finished")
+            ddt_accumulated += dt_target - dt_measured[-1]
     except KeyboardInterrupt:
-        print("keyboard interrupt detected; ending simulation")
+        print("\nkeyboard interrupt detected; ending simulation")
 
     if print_runtime_stats:
-        _print_run_nengo_realtime_stats(dt_target, dt_measured)
+        _print_run_nengo_realtime_stats(dt_target, np.array(dt_measured))
 
     if save_probe_data is not None:
-        sim_time = nengo_sim.trange().reshape(-1,1)
-        measured_time = np.cumsum(dt_measured).reshape(-1,1)
+        sim_time = nengo_sim.trange().reshape(-1, 1)
+        measured_time = np.cumsum(dt_measured).reshape(-1, 1)
         len_sim_time = len(sim_time)
         len_measured_time = len(measured_time)
         for p_obj, fname in save_probe_data.items():
@@ -133,7 +132,7 @@ class RedisNodeGet(nengo.Node):
 
     def update(self, t):
         """update called with each step of the simulation"""
-        return np.array(redis_util.get_key(self.dbredis))
+        return np.array(redis_util.get_key(self.dbredis, self.redis_key, self.value_fun))
 
 class RedisNodeGetRx(nengo.Node):
     """nengo Node for getting normalized receiver data from redis"""
