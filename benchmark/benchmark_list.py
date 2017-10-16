@@ -11,7 +11,7 @@ def _print_stats(N, dt):
     max_dt = np.max(dt)
     print(
         "%d appends, "%(N) +
-        "mean_dt:%.6fms std_dt:%.6fms median_dt:%.6fms std_dt/mean_dt:%.1f"%(
+        "mean_dt:%.6fms std_dt:%.6fms median_dt:%.6fms std_dt/mean_dt:%.1f "%(
             1000*mean_dt, 1000*std_dt, 1000*median_dt, std_dt/mean_dt) +
         "max_dt:%.3fms"%(1000*max_dt))
 

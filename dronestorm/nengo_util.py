@@ -1,6 +1,7 @@
 """This module defines helper functions to run nengo networks"""
 from __future__ import print_function
 import time
+import timeit
 import nengo
 from nengo.utils.ensemble import tuning_curves
 import numpy as np
@@ -8,22 +9,15 @@ import dronestorm.comm.redis_util as redis_util
 
 # minimum sleep accurately implemented by the OS and hardware
 # determine using benchmark/benchmark_sleep.py
-MIN_SLEEP = 0.001
+MIN_SLEEP = 0.005
 
 ATTITUDE_SCALE = 180.
 ATTITUDE_SCALE_INV = 1./ATTITUDE_SCALE
 
 def _print_run_nengo_realtime_stats(
-        dt_target, dt_measured, dt_measured_full, idx):
+        dt_target, dt_measured):
     """Print the runtime stats of a run_nengo_realtime simulation"""
-    if not dt_measured_full:
-        n_samples = idx
-        if idx == 0:
-            dt_measured = 0
-        else:
-            dt_measured = dt_measured[:idx]
-    else:
-        n_samples = len(dt_measured)
+    n_samples = len(dt_measured)
     dt_mean = np.mean(dt_measured)
     dt_median = np.median(dt_measured)
     dt_std = np.std(dt_measured)
@@ -74,43 +68,39 @@ def run_nengo_realtime(
         t_stop = sim_stop_time
 
     dt_target = nengo_sim.dt
-    n_dt_samples = 100
-    dt_measured = np.zeros(n_dt_samples)
+    dt_measured = []
     ddt = 0 # accumulation of dt_measured - dt_target
 
-    idx = 0
-    dt_measured_full = False
     try:
         while t_cur < t_stop or sim_stop_time is None:
-            start = time.time()
-
+            start = timeit.default_timer()
             if ddt >= MIN_SLEEP:
                 time.sleep(ddt)
                 ddt = 0
-
             nengo_sim.step()
-
             t_cur += dt_target
-            dt_measured[idx] = time.time() - start
-            ddt += dt_target - dt_measured[idx]
-
-            idx += 1
-            dt_measured_full = dt_measured_full | (idx == n_dt_samples)
-            idx %= n_dt_samples
+            dt_measured.append(timeit.default_timer() - start)
+            ddt += dt_target - dt_measured[-1]
         print("nengo simulation finished")
     except KeyboardInterrupt:
         print("keyboard interrupt detected; ending simulation")
 
     if print_runtime_stats:
-        _print_run_nengo_realtime_stats(
-            dt_target, dt_measured, dt_measured_full, idx)
+        _print_run_nengo_realtime_stats(dt_target, dt_measured)
 
     if save_probe_data is not None:
+        sim_time = nengo_sim.trange().reshape(-1,1)
+        measured_time = np.cumsum(dt_measured).reshape(-1,1)
+        len_sim_time = len(sim_time)
+        len_measured_time = len(measured_time)
         for p_obj, fname in save_probe_data.items():
+            probe_data = nengo_sim.data[p_obj]
+            clip_idx = np.min((len_sim_time, len_measured_time, probe_data.shape[0]))
             np.savetxt(
                 fname,
-                np.hstack((nengo_sim.trange().reshape(-1,1), nengo_sim.data[p_obj])),
+                np.hstack((sim_time[:clip_idx], measured_time[:clip_idx], probe_data[:clip_idx])),
                 fmt="%.4f")
+
     if save_tuning_curves:
         for ens_obj, fname in save_tuning_curves.items():
             inputs = np.sort(
