@@ -103,6 +103,31 @@ def spike_wav(
             ax.plot(spk_data)
         plt.show()
 
+def plot_timing(fname_spikes, fname_plot_out=None):
+    """Plot the simulation timing data"""
+    file_data = np.loadtxt('spikes.txt')
+    sim_time = file_data[:, 0]
+    measured_time = file_data[:, 1]
+
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(211)
+    ax.plot(measured_time, label="measured")
+    ax.plot(sim_time, label="simulation")
+    ax.legend(loc="lower right")
+    ax.set_ylabel('cumulative time (s)')
+    ax.set_title("Simulation Timing")
+    ax = fig.add_subplot(212, sharex=ax)
+    ax.plot(np.diff(measured_time), label="measured")
+    ax.plot(np.diff(sim_time), label="simulation")
+    ax.legend(loc="upper right")
+    ax.set_ylabel('delta t (s)')
+    ax.set_xlabel('Simulation step index')
+    if fname_plot_out is not None:
+        assert isinstance(fname_plot_out, str)
+        plt.savefig(fname_plot_out)
+    else:
+        plt.show()
+
 def plot_tuning(fname_tuning_data, fname_plot_out=None, **kwargs):
     """Plot the tuning data
 
@@ -128,7 +153,7 @@ def plot_tuning(fname_tuning_data, fname_plot_out=None, **kwargs):
     ax.plot(stim, tuning, **kwargs)
     ax.set_xlabel('Input')
     ax.set_ylabel('Spike Rate (Hz)')
-
+    ax.set_title("Tuning Curve")
     if fname_plot_out is not None:
         assert isinstance(fname_plot_out, str)
         plt.savefig(fname_plot_out)
