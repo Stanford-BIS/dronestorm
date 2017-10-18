@@ -1,12 +1,114 @@
 """Defines utilities for processing data"""
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from scipy.signal import convolve
 from scipy.io.wavfile import read as wav_read
 from scipy.io.wavfile import write as wav_write
 
 AUDIO_SAMPLE_RATE = 44100 # standard 44.1kHz recording rate
 AUDIO_SAMPLE_DT = 1./AUDIO_SAMPLE_RATE
+
+def _load_spike_data(fname_spikes):
+    """Utility function to load in spike data
+
+    Parameters
+    ----------
+    fname_spikes: string
+        input spike data text filename
+        first column is time
+        subsequent columns are each neuron's spikes as would be recorded in the nengo simulator
+    """
+    file_data = np.loadtxt(fname_spikes)
+    sim_time = file_data[:, 0]
+    measured_time = file_data[:, 1]
+    spk_data_raw = file_data[:, 2:]
+    return sim_time, measured_time, spk_data_raw
+
+def _filter_nrn_idx_yticks(yticks, n_neurons):
+    """Removes non-integer and out-of-range ticks"""
+    tol = 0.001
+    ret_ticks = []
+    for ytick in yticks:
+        ret_tick = int(np.round(ytick))
+        if abs(ret_tick - ytick) < tol and ytick >=0 and ytick < n_neurons:
+            ret_ticks += [ret_tick]
+    return ret_ticks
+
+def spike_raster_movie(
+        fname_spikes, fname_movie_out, nrn_idx=None, time_mode="real",
+        time_stop=None, time_window=1.0, fps=30):
+    """Generate a movie from the spike raster
+
+    Parameters
+    ----------
+    fname_spikes: string
+        input spike data text filename
+        first column is time
+        subsequent columns are each neuron's spikes as would be recorded in the nengo simulator
+    fname_movie_out: string
+        if string, filename of output movie
+    nrn_idx: list-like or none
+        indices of neurons to use to generate wav file
+        if None, uses all neurons, one per wav file channel
+    time_mode: "real" or "sim"
+        Whether to use the spike's real or simulation time
+    time_stop: float or None
+        if float, movie ends time_window after time_stop
+        if None, movie ends after time_window past last spike
+    time_window: float
+        Size of time window over which to view spikes
+    fps: int
+        frames per second
+    """
+    sim_time, measured_time, spk_data_raw = _load_spike_data(fname_spikes)
+    if nrn_idx is not None:
+        spk_data_raw = spk_data_raw[:, nrn_idx]
+    n_samples, n_neurons = spk_data_raw.shape
+    if time_mode == "real":
+        time = measured_time
+    elif time_mode == "sim":
+        time = sim_time
+    spk_times = []
+    for nrn_idx in range(n_neurons):
+        spk_idx = np.nonzero(spk_data_raw[:, nrn_idx])[0]
+        spk_times.append(time[spk_idx])
+
+    fig = plt.figure()
+
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    ax = fig.add_subplot(111)
+    y_range = 0.8
+    last_spk_time = 0.
+    for nrn_idx in range(n_neurons):
+        y_mid = nrn_idx
+        y_min = y_mid - y_range/2.
+        y_max = y_mid + y_range/2.
+        spk_idx = np.nonzero(spk_data_raw[:, nrn_idx])[0]
+        spk_times = time[spk_idx]
+        last_spk_time = np.max(spk_times.tolist() + [last_spk_time])
+        ax.vlines(spk_times, y_min, y_max, colors[nrn_idx%len(colors)])
+    ax.set_ylim(-y_range/1.5, n_neurons-1+y_range/1.5)
+    ax.set_title("Spike Raster")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Neuron Index")
+    ax.set_yticks(_filter_nrn_idx_yticks(ax.get_yticks(), n_neurons))
+
+    time_start = -time_window
+    if time_stop is None:
+        time_stop = last_spk_time+time_window
+    else:
+        time_stop = time_stop+time_window
+    animation_time_total = time_stop - time_start - time_window
+    animation_dt = 1./fps
+    n_frames = int(np.round(animation_time_total*fps))
+
+    moviewriter = animation.FFMpegWriter(fps=fps)
+    with moviewriter.saving(fig, fname_movie_out, dpi=100):
+        for frame_idx in range(n_frames):
+            time_since_start = frame_idx*animation_dt
+            ax.set_xlim(time_start+time_since_start, time_start+time_since_start+time_window)
+            moviewriter.grab_frame()
 
 def spike_wav(
         fname_spikes, fname_wav, nrn_idx=None,
@@ -29,7 +131,7 @@ def spike_wav(
     time_mode: "real" or "sim"
         Whether to use the spike's real or simulation time
     fname_spike_kernel: string or None
-        if not None, wav file name of kernel to convolve spikes with to generate different sounds
+        if string, wav file name of kernel to convolve spikes with to generate different sounds
     wav_dtype: numpy dtype
         data type to be used in the wav file
     """
@@ -37,14 +139,10 @@ def spike_wav(
     assert isinstance(fname_wav, str)
     assert time_mode in ["real", "sim"]
 
-    file_data = np.loadtxt(fname_spikes)
-    sim_time = file_data[:, 0]
-    measured_time = file_data[:, 1]
-    spk_data_raw = file_data[:, 2:]
+    sim_time, measured_time, spk_data_raw = _load_spike_data(fname_spikes)
     if nrn_idx is not None:
         spk_data_raw = spk_data_raw[:, nrn_idx]
     n_samples, n_neurons = spk_data_raw.shape
-
     if time_mode == "real":
         time = measured_time
     elif time_mode == "sim":
@@ -128,7 +226,7 @@ def plot_timing(fname_spikes, fname_plot_out=None):
     else:
         plt.show()
 
-def plot_tuning(fname_tuning_data, fname_plot_out=None, **kwargs):
+def plot_tuning(fname_tuning_data, fname_plot_out=None, label=False, xlabel="Input", **kwargs):
     """Plot the tuning data
 
     Parameters
@@ -139,6 +237,10 @@ def plot_tuning(fname_tuning_data, fname_plot_out=None, **kwargs):
         remaining columns are the tuning data
     show: boolean
         whether or not to show the plot
+    label: boolean
+        whether or not to label the tuning curves and display a legend
+    xlabel: string
+        x axis label
     fname_plot_out: string or None
         filename to save the plot to if not None
         if None, shows the plot live
@@ -150,8 +252,13 @@ def plot_tuning(fname_tuning_data, fname_plot_out=None, **kwargs):
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.plot(stim, tuning, **kwargs)
-    ax.set_xlabel('Input')
+    if label:
+        for nrn_idx in range(tuning.shape[1]):
+            ax.plot(stim, tuning[:, nrn_idx], label="Neuron %d"%nrn_idx, **kwargs)
+        ax.legend(loc="best")
+    else:
+        ax.plot(stim, tuning, **kwargs)
+    ax.set_xlabel(xlabel)
     ax.set_ylabel('Spike Rate (Hz)')
     ax.set_title("Tuning Curve")
     if fname_plot_out is not None:
