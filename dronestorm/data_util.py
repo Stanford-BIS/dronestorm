@@ -16,14 +16,15 @@ def _load_spike_data(fname_spikes):
     ----------
     fname_spikes: string
         input spike data text filename
-        first column is time
+        first column is sim time
+        second column is real time
         subsequent columns are each neuron's spikes as would be recorded in the nengo simulator
     """
     file_data = np.loadtxt(fname_spikes)
     sim_time = file_data[:, 0]
-    measured_time = file_data[:, 1]
+    real_time = file_data[:, 1]
     spk_data_raw = file_data[:, 2:]
-    return sim_time, measured_time, spk_data_raw
+    return sim_time, real_time, spk_data_raw
 
 def _filter_nrn_idx_yticks(yticks, n_neurons):
     """Removes non-integer and out-of-range ticks"""
@@ -35,7 +36,7 @@ def _filter_nrn_idx_yticks(yticks, n_neurons):
             ret_ticks += [ret_tick]
     return ret_ticks
 
-def spike_raster_movie(
+def animate_spike_raster(
         fname_spikes, fname_movie_out, nrn_idx=None, time_mode="real",
         time_stop=None, time_window=1.0, fps=30):
     """Generate a movie from the spike raster
@@ -44,7 +45,8 @@ def spike_raster_movie(
     ----------
     fname_spikes: string
         input spike data text filename
-        first column is time
+        first column is sim time
+        second column is real time
         subsequent columns are each neuron's spikes as would be recorded in the nengo simulator
     fname_movie_out: string
         if string, filename of output movie
@@ -61,12 +63,12 @@ def spike_raster_movie(
     fps: int
         frames per second
     """
-    sim_time, measured_time, spk_data_raw = _load_spike_data(fname_spikes)
+    sim_time, real_time, spk_data_raw = _load_spike_data(fname_spikes)
     if nrn_idx is not None:
         spk_data_raw = spk_data_raw[:, nrn_idx]
     n_samples, n_neurons = spk_data_raw.shape
     if time_mode == "real":
-        time = measured_time
+        time = real_time
     elif time_mode == "sim":
         time = sim_time
     spk_times = []
@@ -110,7 +112,74 @@ def spike_raster_movie(
             ax.set_xlim(time_start+time_since_start, time_start+time_since_start+time_window)
             moviewriter.grab_frame()
 
-def spike_wav(
+def animate_tuning(
+        fname_tuning_data, fname_input_data, fname_movie_out, input_data_col=2,
+        time_mode="real", fps=30,
+        label=True, xlabel="Input"):
+    """Generate a movie from the spike raster
+
+    Parameters
+    ----------
+    fname_tuning: string
+        tuning data filename
+        first column is the input stimulus used to generate the tuning data
+        remaining columns are the tuning data
+    fname_input_data: string
+        input data filename
+        first column is sim time
+        first column is real time
+        subsequent columns are each inputs dimension
+    fname_movie_out: string
+        if string, filename of output movie
+    nrn_idx: list-like or none
+        indices of neurons to use to generate wav file
+        if None, uses all neurons, one per wav file channel
+    time_mode: "real" or "sim"
+        Whether to use the spike's real or simulation time
+    fps: int
+        frames per second
+    label: boolean
+        whether or not to label the tuning curves and display a legend
+    xlabel: string
+        x axis label
+    """
+    fig, ax = plot_tuning(fname_tuning_data, show=False, label=label, xlabel=xlabel)
+    ylim = ax.get_ylim()
+
+    file_data = np.loadtxt(fname_input_data)
+    sim_time = file_data[:, 0]
+    real_time = file_data[:, 1]
+    input_data = file_data[:, input_data_col]
+
+    if time_mode == "real":
+        time = real_time
+    elif time_mode == "sim":
+        time = sim_time
+
+    n_frames = int(np.round(time[-1]*fps))
+    time_idx = 0
+    len_time = len(time)
+    in_dat_line = ax.plot(
+        [input_data[time_idx], input_data[time_idx]],
+        [ylim[0], ylim[1]], 'r:')[0]
+    ax.set_ylim(ylim)
+
+    moviewriter = animation.FFMpegWriter(fps=fps)
+    with moviewriter.saving(fig, fname_movie_out, dpi=100):
+        for frame_idx in range(n_frames):
+            curr_time = frame_idx / fps
+            moved = False
+            while time[time_idx] <= curr_time:
+                time_idx += 1
+                moved = True
+            if moved:
+                time_idx -= 1
+            if time_idx < len_time:
+                in_dat_line.set_data(
+                    [input_data[time_idx], input_data[time_idx]], [ylim[0], ylim[1]])
+                moviewriter.grab_frame()
+
+def make_spike_wav(
         fname_spikes, fname_wav, nrn_idx=None,
         time_mode = "real",
         fname_spike_kernel=None, wav_dtype=np.int32,
@@ -226,8 +295,11 @@ def plot_timing(fname_spikes, fname_plot_out=None):
     else:
         plt.show()
 
-def plot_tuning(fname_tuning_data, fname_plot_out=None, label=False, xlabel="Input", **kwargs):
+def plot_tuning(
+        fname_tuning_data, fname_plot_out=None, show=True, label=False, xlabel="Input", **kwargs):
     """Plot the tuning data
+
+    Returns the figure and axis handle of the plot
 
     Parameters
     ----------
@@ -264,5 +336,7 @@ def plot_tuning(fname_tuning_data, fname_plot_out=None, label=False, xlabel="Inp
     if fname_plot_out is not None:
         assert isinstance(fname_plot_out, str)
         plt.savefig(fname_plot_out)
-    else:
+    if show:
         plt.show()
+
+    return fig, ax
