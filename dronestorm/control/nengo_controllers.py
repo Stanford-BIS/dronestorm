@@ -63,10 +63,11 @@ def create_control_none_nengo_encode_roll(sim_dt=0.005):
             intercepts=np.array([0.05, 0.05]))
         nengo.Connection(attitude[0], ens, synapse=None)
         ens_probe = nengo.Probe(ens.neurons)
+        attitude_probe = nengo.Probe(attitude)
 
         print_node = PrintNode(print_wrapper, size_in=12)
         nengo.Connection(rx_signals_in, print_node[:6], synapse=None)
         nengo.Connection(rx_signals_in, print_node[6:], synapse=None)
 
     sim = nengo.Simulator(net, sim_dt, progress_bar=False)
-    return sim, ens_probe, ens
+    return sim, ens_probe, attitude_probe, ens

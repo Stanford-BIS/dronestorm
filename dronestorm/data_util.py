@@ -260,7 +260,7 @@ def plot_tuning(fname_tuning_data, fname_plot_out=None, label=False, xlabel="Inp
         ax.plot(stim, tuning, **kwargs)
     ax.set_xlabel(xlabel)
     ax.set_ylabel('Spike Rate (Hz)')
-    ax.set_title("Tuning Curve")
+    ax.set_title("Tuning Curves")
     if fname_plot_out is not None:
         assert isinstance(fname_plot_out, str)
         plt.savefig(fname_plot_out)
