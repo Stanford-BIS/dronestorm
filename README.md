@@ -1,12 +1,11 @@
 # dronestorm
 
-This library can be used to program flight controllers and acquire telemetry
-data. The applications of this allows one to program flight stabilization
-programs, autonomy algorithms and object recognition suites.
+Dronestorm provides control for a quadcopter as implemented either through standard coding or
+through neural networks programmed with [nengo](https://github.com/nengo/nengo).
+Dronestorm runs on a general purpose computer (e.g. a Raspberry Pi) onboard the quadcopter
+as a complement to a the quadcopter's flight control board (e.g. Omnibus F3).
 
-dronestorm is meant to be run on an onboard computer such as a
-Raspberry Pi, and sends commands to a flight controller via the pi's I2C
-interface.
+Documentation is available on the [wiki](https://github.com/Stanford-BIS/dronestorm/wiki)
 
 # Quadcopter Build 2
 
